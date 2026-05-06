@@ -7,7 +7,7 @@ export const tokenGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const tokenService = inject(TokenService);
   const router = inject(Router);
 
-  const token = route.paramMap.get('token');
+ const token = route.paramMap.get('token');
   if (!token) {
     router.navigate(['/token-invalide']);
     return of(false);
