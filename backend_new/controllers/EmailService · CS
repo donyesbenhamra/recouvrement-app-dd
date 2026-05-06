@@ -1,0 +1,61 @@
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
+
+namespace RecouvrementAPI.Services
+{
+    public class EmailService
+    {
+        private readonly IConfiguration _config;
+
+        public EmailService(IConfiguration config)
+        {
+            _config = config;
+        }
+
+        public async Task EnvoyerAsync(string destinataire, string nomClient, string lien)
+        {
+            var settings = _config.GetSection("EmailSettings");
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(settings["SenderName"], settings["SenderEmail"]));
+            message.To.Add(new MailboxAddress(nomClient, destinataire));
+            message.Subject = "STB Bank – Action requise : Régularisez votre situation";
+
+            var body = new BodyBuilder
+            {
+                HtmlBody = $@"
+                <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;'>
+                    <div style='background:#2563B8;padding:20px;text-align:center;'>
+                        <h2 style='color:white;margin:0;'>STB Bank</h2>
+                    </div>
+                    <div style='padding:30px;border:1px solid #e2e8f0;'>
+                        <p>Bonjour <strong>{nomClient}</strong>,</p>
+                        <p>Nous vous informons qu'un impayé est enregistré sur votre dossier.</p>
+                        <p>Veuillez accéder à votre espace personnel pour régulariser votre situation :</p>
+                        <div style='text-align:center;margin:30px 0;'>
+                            <a href='{lien}' style='background:#2563B8;color:white;padding:14px 28px;
+                               border-radius:6px;text-decoration:none;font-weight:bold;'>
+                               Accéder à mon espace
+                            </a>
+                        </div>
+                        <p style='color:#ef4444;font-weight:bold;'>⚠️ Ce lien expire dans 7 jours.</p>
+                        <hr style='border:none;border-top:1px solid #e2e8f0;margin:20px 0;'>
+                        <p style='color:#64748b;font-size:12px;'>
+                            Société Tunisienne de Banque – Service Recouvrement<br>
+                            Cet email est automatique, merci de ne pas y répondre.
+                        </p>
+                    </div>
+                </div>"
+            };
+
+            message.Body = body.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(settings["SmtpHost"], int.Parse(settings["SmtpPort"]!), SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(settings["SenderEmail"], settings["Password"]);
+            await smtp.SendAsync(message);
+            await smtp.DisconnectAsync(true);
+        }
+    }
+}

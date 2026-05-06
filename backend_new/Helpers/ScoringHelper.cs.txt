@@ -1,0 +1,51 @@
+using System.Collections.Generic;
+using System.Linq;
+using RecouvrementAPI.Models;
+
+namespace RecouvrementAPI.Helpers
+{
+    public static class ScoringHelper
+    {
+        public static int GetHistorique(IEnumerable<HistoriquePaiement> historique)
+        {
+            if (historique == null || !historique.Any()) return 30;
+            int nbPaiements = historique.Count();
+            return Math.Max(0, 30 - (nbPaiements * 5));
+        }
+
+        public static int GetGarantie(IEnumerable<Garantie> garanties)
+        {
+            if (garanties == null || !garanties.Any()) return 0;
+            return garanties.Count() * 10;
+        }
+
+        public static int GetIntention(IntentionClient intention)
+        {
+            if (intention == null) return 0;
+            if (intention.Statut == "Non Respectée" || intention.Statut == "Refus" || intention.TypeIntention == "reclamation")
+                return 20;
+            return -20;
+        }
+
+        public static string GetNiveau(int score)
+        {
+            if (score <= 40) return "Faible 🟢";    // 0-40   : peu de retard
+            if (score <= 60) return "Moyen 🟠";     // 41-60  : retard modéré
+            if (score < 80)  return "Élevé 🔴";     // 61-79  : retard important
+            return "Critique 🔴🔴";                  // >= 80  : proche 180 jours
+        }
+
+        public static string GetRecommandation(int score)
+        {
+            if (score <= 40) return "Relance douce (SMS/Email)";
+            if (score <= 60) return "Appel téléphonique / Mise en demeure";
+            if (score < 80)  return "Transfert service contentieux";
+            return "Action judiciaire immédiate";
+        }
+
+        public static bool IsJuridique(int score)
+        {
+            return score >= 80; // ✅ true dès 80 (≈ 150-180 jours retard)
+        }
+    }
+}
