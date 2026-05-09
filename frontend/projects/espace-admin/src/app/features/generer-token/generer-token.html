@@ -1,0 +1,81 @@
+<div class="page active">
+  <div class="tb">
+    <div class="pt">Générer un lien token sécurisé</div>
+  </div>
+
+  <div class="tw"
+    style="padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; border: 1px solid #e2e8f0; background: white;">
+
+    <!-- Client & dossier -->
+    <div class="form-group">
+      <label style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block;">
+        Client & dossier <span style="color:#ef4444">*</span>
+      </label>
+    <div class="form-group">
+  <label style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block;">
+    Email du client <span style="color:#ef4444">*</span>
+  </label>
+  <input type="email" [(ngModel)]="emailClient" placeholder="ex: client@email.com"
+    (blur)="rechercherClient()"
+    [style.border]="errorClient ? '2px solid #ef4444' : '2px solid #e2e8f0'"
+    style="width: 100%; padding: 12px; font-size: 14px; border-radius: 8px; outline:none;">
+  
+  <!-- Client trouvé -->
+  <div *ngIf="clientTrouve" style="margin-top:8px; padding:10px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; font-size:13px; color:#166534;">
+    ✅ {{ clientTrouve.client }} — Dossier #{{ clientTrouve.idDossier }} — {{ clientTrouve.typeCredit }}
+  </div>
+
+  <!-- Client non trouvé -->
+  <div *ngIf="clientNonTrouve" style="margin-top:8px; font-size:12px; color:#ef4444; font-weight:600;">
+    ⚠ Aucun client trouvé avec cet email.
+  </div>
+
+  <div *ngIf="errorClient" style="margin-top:5px; font-size:12px; color:#ef4444; font-weight:600;">
+    ⚠ Veuillez saisir un email valide.
+  </div>
+</div>
+      <div *ngIf="errorClient"
+        style="margin-top:5px; font-size:12px; color:#ef4444; font-weight:600; display:flex; align-items:center; gap:4px;">
+        ⚠ Veuillez sélectionner un client.
+      </div>
+    </div>
+
+    <!-- Canal d'envoi -->
+    <div style="margin-top: 20px;">
+      <div class="form-group" style="width: 100%;">
+        <label style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block;">
+          Canal d'envoi <span style="color:#ef4444">*</span>
+        </label>
+        <select [(ngModel)]="selectedCanal"
+          [style.border]="errorCanal ? '2px solid #ef4444' : '2px solid #e2e8f0'"
+          style="width: 100%; padding: 12px; font-size: 14px; border-radius: 8px; outline:none;">
+          <option value="">-- Choisir un canal --</option>
+          <option>E-mail</option>
+          <option>SMS</option>
+          <option>Email & SMS</option>
+        </select>
+        <div *ngIf="errorCanal"
+          style="margin-top:5px; font-size:12px; color:#ef4444; font-weight:600; display:flex; align-items:center; gap:4px;">
+          ⚠ Veuillez choisir un canal d'envoi.
+        </div>
+      </div>
+    </div>
+
+    <!-- Aperçu lien -->
+    <div
+      style="margin-top: 25px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; color: #64748b;">
+      <div style="font-weight: 600; margin-bottom: 5px; color: #1e293b;">Aperçu du lien (lecture seule)</div>
+      <input type="text" [value]="generatedLink" readonly
+        style="width:100%; border:none; background: transparent; color:#1e293b; font-family: monospace; outline: none; padding: 0;">
+      <div style="margin-top: 10px; font-size: 11px; color: #ef4444; font-weight: 600;">⚠️ Ce lien expirera automatiquement dans 7 jours.</div>
+    </div>
+
+    <!-- Boutons -->
+    <div style="display: flex; gap: 15px; margin-top: 30px; justify-content: flex-end;">
+      <button class="btn" style="border: 2px solid #e2e8f0; font-weight: 600; padding: 10px 20px;"
+        (click)="annuler()">Annuler</button>
+      <button class="btn bp" style="font-weight: 600; padding: 10px 20px;" (click)="generer()">Générer et envoyer</button>
+    </div>
+  </div>
+
+</div>

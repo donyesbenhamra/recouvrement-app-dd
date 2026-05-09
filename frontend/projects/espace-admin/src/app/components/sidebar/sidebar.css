@@ -1,0 +1,227 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sidebar-container {
+  background: linear-gradient(170deg, #abd0f2 0%, #94b9da 35%, 
+  #4d89c5 80%, #1f4cb3 100%);
+
+}
+
+/* HEADER / LOGO STACK */
+.logo-text-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-symbol-xl {
+  width: 250px;
+  height: auto;
+  object-fit: contain;
+}
+:host {
+  --sidebar-text: #e8f6ff;
+  --sidebar-active: rgba(255, 255, 255, 0.18);
+}
+/* MENU */
+.sb-menu {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.sb-section {
+  padding: 10px 24px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-top: 10px;
+}
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sb-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sb-item.active {
+  background: var(--sidebar-active);
+  border-left: 4px solid #FFD700;
+  padding-left: 20px;
+}
+
+.sb-icon {
+  font-size: 18px;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+/* BADGES */
+.notif-badge {
+  position: absolute;
+  right: 15px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 14px;
+  text-align: center;
+}
+
+.notif-badge.secondary {
+  background: var(--warning);
+}
+
+/* FOOTER */
+.sb-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  transition: background 0.2s;
+}
+
+.theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.theme-icon {
+  font-size: 18px;
+}
+
+.theme-text {
+  font-size: 14px;
+}
+
+/* USER SECTION */
+.sb-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sb-av {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sb-user-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sb-un {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-ur {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 71, 87, 0.2);
+  border-color: #ff4757;
+}
+
+.logo-horizontal {
+  perspective: 300px;
+}
+
+.text-stb,
+.text-bank {
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-shadow:
+    1px 1px 0px rgba(0, 0, 0, 0.4),
+    2px 2px 0px rgba(0, 0, 0, 0.3),
+    3px 3px 0px rgba(0, 0, 0, 0.2),
+    4px 4px 8px rgba(0, 0, 0, 0.3);
+  transform: perspective(200px) rotateX(8deg);
+  display: inline-block;
+  transition: transform 0.3s;
+}
+
+.text-stb:hover,
+.text-bank:hover {
+  transform: perspective(200px) rotateX(0deg) scale(1.05);
+}
+
+.icon-middle {
+  height: 80px;
+  width: auto;
+  filter:
+    drop-shadow(1px 1px 0px rgba(0, 0, 0, 0.4)) drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.3)) drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.4));
+  transition: filter 0.3s, transform 0.3s;
+}
+
+.icon-middle:hover {
+  filter:
+    drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5)) drop-shadow(4px 4px 10px rgba(0, 0, 0, 0.5));
+  transform: scale(1.08) translateY(-2px);
+}
+
+.app-subtitle {
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow:
+    0px 1px 0px rgba(255, 255, 255, 0.15),
+    1px 2px 0px rgba(0, 0, 0, 0.3),
+    2px 3px 6px rgba(0, 0, 0, 0.25);
+  opacity: 1;
+}

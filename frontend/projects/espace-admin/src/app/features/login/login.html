@@ -1,0 +1,46 @@
+<div class="login-page">
+  <div class="login-header">
+    <div class="logo-stack">
+      <div class="logo-text-inline">
+        <img src="assets/OIP-removebg-preview.png" alt="Icon" class="logo-symbol-xl">
+      </div>
+    </div>
+  </div>
+
+  <div class="login-center">
+    <div class="login-card">
+      <div class="login-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <div class="login-title">Espace Recouvrement</div>
+      <div class="login-subtitle">Connectez-vous avec vos identifiants STB</div>
+
+      <div class="form-group">
+        <label>Identifiant Agent</label>
+        <div class="input-group" [class.focused]="isUsernameFocused">
+          <input type="text" [(ngModel)]="username" 
+                 placeholder="prenom.nom" 
+                 (focus)="isUsernameFocused = true" 
+                 (blur)="isUsernameFocused = false"
+                 (keyup.enter)="login()">
+          <span class="input-domain">@stbbank.tn</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label style="display: flex; justify-content: space-between; align-items: center;">
+          Mot de passe
+          <span class="forgot-link" (click)="forgotPassword()">Oublié ?</span>
+        </label>
+        <input type="password" [(ngModel)]="password" placeholder="••••••••" (keyup.enter)="login()">
+      </div>
+
+      <div class="error-msg" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+      <button class="login-btn" (click)="login()">Se connecter</button>
+    </div>
+  </div>
+</div>

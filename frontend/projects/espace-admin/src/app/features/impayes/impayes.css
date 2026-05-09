@@ -1,0 +1,32 @@
+.kpi-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  border-left: 4px solid;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.kpi-red   { border-color: #ef4444; } .kpi-red   .kpi-value { color: #ef4444; }
+.kpi-orange{ border-color: #f59e0b; } .kpi-orange .kpi-value { color: #f59e0b; }
+.kpi-blue  { border-color: #2563B8; } .kpi-blue  .kpi-value { color: #2563B8; }
+.kpi-green { border-color: #10b981; } .kpi-green .kpi-value { color: #10b981; }

@@ -1,0 +1,311 @@
+<div class="page">
+
+  <!-- Header -->
+  <div class="tb">
+    <div class="pt">Gestion de liste des clients</div>
+    <div class="ta">
+      <button class="btn" (click)="exporterExcel()">↑ Exporter Excel</button>
+      <button class="btn bp" (click)="creerClient()">+ Nouveau client</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kg" style="grid-template-columns: repeat(5, 1fr)">
+    <div class="kpi">
+      <div class="kl">Total dossiers</div>
+      <div class="kv">{{ stats.total }}</div>
+      <div class="ks">en base de données</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Total emprunté (Impayé)</div>
+      <div class="kv">{{ stats.montant | number:'1.0-0' }} DT</div>
+    </div>
+    <div class="kpi kd">
+      <div class="kl">Contentieux</div>
+      <div class="kv">{{ stats.contentieux }}</div>
+    </div>
+    <div class="kpi kw">
+      <div class="kl">Amiable</div>
+      <div class="kv">{{ stats.amiable }}</div>
+    </div>
+    <div class="kpi kok">
+      <div class="kl">Régularisé</div>
+      <div class="kv">{{ stats.regularise }}</div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="fb">
+    <select [(ngModel)]="filterStatut" (change)="loadClients()">
+      <option value="">Statut</option>
+      <option value="contentieux">Contentieux</option>
+      <option value="aimable">Amiable</option>
+      <option value="regularise">Régularisé</option>
+    </select>
+    <select [(ngModel)]="filterAgence" (change)="loadClients()">
+      <option value="">Agence</option>
+       <option>Sousse</option>
+  <option>Tunis</option>
+    </select>
+    <input type="search" placeholder="Rechercher…" [(ngModel)]="filterSearch" style="width:200px">
+  </div>
+
+  <!-- Table -->
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th>N° Dossier</th>
+          <th>Client</th>
+          <th>Téléphone</th>
+          <th>Email</th>
+          <th>Agence STB</th>
+          <th>Type Crédit</th>
+          <th>Montant Dû</th>
+          <th>Retard</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of filteredClients">
+          <td>#{{ c.idDossier }}</td>
+          <td>{{ c.client }}</td>
+          <td>{{ c.telephone }}</td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.agence }}</td>
+          <td>{{ c.typeCredit }}</td>
+          <td>{{ c.montantDu | number:'1.0-0' }} DT</td>
+          <td [style.color]="c.retard > 90 ? '#ef4444' : c.retard > 0 ? '#f59e0b' : '#10b981'">
+            {{ c.retard > 0 ? c.retard + 'j' : 'OK' }}
+          </td>
+          <td>
+            <span class="b" [ngClass]="{
+              'bd2': c.statut === 'Contentieux',
+              'bw': c.statut === 'Amiable',
+              'bok': c.statut === 'Regularise'
+            }">{{ c.statut }}</span>
+          </td>
+          <td>
+ <!-- dans le td Actions, remplacer traiter -->
+<span class="al" (click)="ouvrirEdit(c)">Traiter</span>
+
+<!-- drawer édition — ajouter à la fin du fichier avant </div> final -->
+<div class="drawer-backdrop" *ngIf="editClient" (click)="fermerEdit()" [class.visible]="editDrawerOpen"></div>
+<div class="drawer" *ngIf="editClient" [class.open]="editDrawerOpen">
+  <div class="drawer-header">
+    <div class="drawer-header-content">
+      <div style="font-size:20px;font-weight:700;color:#1e293b;">Modifier le dossier</div>
+      <div style="font-size:13px;color:#64748b;">{{ editClient.client }} — #{{ editClient.idDossier }}</div>
+    </div>
+    <button class="drawer-close" (click)="fermerEdit()">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="drawer-title">Coordonnées</div>
+      <div class="info-row" style="flex-direction:column;gap:8px;">
+        <label style="font-size:12px;color:#64748b;">Téléphone</label>
+        <input type="text" [(ngModel)]="editClient.telephone"
+          style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+      </div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-title">Statut du dossier</div>
+      <div class="info-row" style="flex-direction:column;gap:8px;">
+        <label style="font-size:12px;color:#64748b;">Statut</label>
+        <select [(ngModel)]="editClient.statut"
+          style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+          <option value="Amiable">Amiable</option>
+          <option value="Contentieux">Contentieux</option>
+          <option value="Regularise">Régularisé</option>
+        </select>
+      </div>
+    </div>
+    <div class="drawer-section action-section">
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="action-btn secondary" (click)="fermerEdit()" style="flex:1;">Annuler</button>
+        <button class="action-btn primary" (click)="sauvegarderEdit()" style="flex:1;">✅ Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <span class="al" (click)="voirFiche(c)">Fiche</span>
+  <span class="al" 
+        *ngIf="c.montantDu === 0"
+        (click)="archiver(c.idDossier)"
+        style="color:#10b981; font-weight:600; cursor:pointer;">
+    Archiver
+  </span>
+</td>
+ 
+         
+        </tr>
+        <tr *ngIf="clients.length === 0">
+          <td colspan="10" style="text-align:center; color:#64748b; padding:20px;">Aucun dossier trouvé.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pag">
+    <div class="pg" (click)="currentPage = 1; loadClients()">«</div>
+    <div class="pg" (click)="currentPage > 1 && (currentPage = currentPage - 1); loadClients()">‹</div>
+    <div class="pg active">{{ currentPage }}</div>
+    <div class="pg" (click)="currentPage < totalPages && (currentPage = currentPage + 1); loadClients()">›</div>
+    <div class="pg" (click)="currentPage = totalPages; loadClients()">»</div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- Drawer Fiche Client   -->
+  <!-- ===================== -->
+  <div class="drawer-backdrop" *ngIf="selectedClient" (click)="fermerTiroir()" [class.visible]="drawerOpen"></div>
+  <div class="drawer" *ngIf="selectedClient" [class.open]="drawerOpen">
+
+    <div class="drawer-header">
+      <div class="drawer-header-content">
+        <div style="font-size: 20px; font-weight: 700; color: #1e293b;">{{ selectedClient.client }}</div>
+        <div style="font-size: 13px; color: #64748b;">
+          Dossier #{{ selectedClient.idDossier }} &nbsp;·&nbsp; Agence {{ selectedClient.agence }}
+        </div>
+      </div>
+      <button class="drawer-close" (click)="fermerTiroir()">&times;</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Coordonnées -->
+      <div class="drawer-section">
+        <div class="drawer-title">Coordonnées</div>
+        <div class="info-row">
+          <span class="info-label">Téléphone</span>
+          <span class="info-value">{{ selectedClient.telephone }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ selectedClient.email }}</span>
+        </div>
+      </div>
+
+      <!-- Finance -->
+      <div class="drawer-section">
+        <div class="drawer-title">Détails de la créance</div>
+        <div class="kpi-mini">
+          <div style="color: #64748b; font-size: 12px; margin-bottom: 5px;">Montant en retard</div>
+          <div style="font-size: 24px; font-weight: 700; color: #ef4444;">{{ selectedClient.montantDu | number:'1.0-0'
+            }} DT</div>
+          <div style="font-size: 12px; color: #ef4444; margin-top: 5px; font-weight: 600;">Retard: {{
+            selectedClient.retard }}j</div>
+        </div>
+        <div class="info-row" style="margin-top: 15px;">
+          <span class="info-label">Type de Crédit</span>
+          <span class="info-value">{{ selectedClient.typeCredit }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Statut Dossier</span>
+          <span class="info-value">{{ selectedClient.statut }}</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="drawer-section action-section">
+        <div class="drawer-title" style="margin-bottom: 20px;">Actions de Recouvrement Rapide</div>
+        <button class="action-btn primary" (click)="actionRelance('token')">
+          <span style="font-size: 16px; margin-bottom: 4px;">🔗</span>
+          Générer et envoyer Lien Token
+        </button>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button class="action-btn secondary" (click)="actionRelance('sms')" style="flex: 1;">
+            📱 SMS Relance
+          </button>
+          <button class="action-btn secondary" (click)="actionRelance('email')" style="flex: 1;">
+            ✉️ Email Relance
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================= -->
+  <!-- Drawer Création Client    -->
+  <!-- ========================= -->
+  <div class="drawer-backdrop" *ngIf="showCreateForm" (click)="fermerFormulaire()" [class.visible]="showCreateForm">
+  </div>
+  <div class="drawer" *ngIf="showCreateForm" [class.open]="showCreateForm">
+
+    <div class="drawer-header">
+      <div class="drawer-header-content">
+        <div style="font-size: 20px; font-weight: 700; color: #1e293b;">Nouveau Dossier Client</div>
+        <div style="font-size: 13px; color: #64748b;">Remplissez les informations du client</div>
+      </div>
+      <button class="drawer-close" (click)="fermerFormulaire()">&times;</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="drawer-section">
+        <div class="drawer-title">Informations personnelles</div>
+        <div class="info-row" style="flex-direction: column; gap: 8px;">
+          <label style="font-size:12px; color:#64748b;">Nom complet</label>
+          <input type="text" [(ngModel)]="newClient.client" placeholder="Ex: Ben Ali Mohamed"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+        </div>
+        <div class="info-row" style="flex-direction: column; gap: 8px; margin-top:10px;">
+          <label style="font-size:12px; color:#64748b;">Téléphone</label>
+          <input type="text" [(ngModel)]="newClient.telephone" placeholder="+216 XX XXX XXX"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+        </div>
+        <div class="info-row" style="flex-direction: column; gap: 8px; margin-top:10px;">
+          <label style="font-size:12px; color:#64748b;">Email</label>
+          <input type="email" [(ngModel)]="newClient.email" placeholder="email@exemple.com"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <div class="drawer-title">Informations crédit</div>
+        <div class="info-row" style="flex-direction: column; gap: 8px;">
+          <label style="font-size:12px; color:#64748b;">Agence STB</label>
+          <select [(ngModel)]="newClient.agence"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+            <option value="">-- Choisir --</option>
+             <option>Sousse</option>
+  <option>Tunis</option>
+          </select>
+        </div>
+        <div class="info-row" style="flex-direction: column; gap: 8px; margin-top:10px;">
+          <label style="font-size:12px; color:#64748b;">Type de crédit</label>
+          <select [(ngModel)]="newClient.typeEmprunt"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+            <option value="">-- Choisir --</option>
+            <option>Crédit immobilier</option>
+            <option>Crédit auto</option>
+            <option>Crédit à la consommation</option>
+          </select>
+        </div>
+        <div class="info-row" style="flex-direction: column; gap: 8px; margin-top:10px;">
+          <label style="font-size:12px; color:#64748b;">Montant dû (DT)</label>
+          <input type="number" [(ngModel)]="newClient.montantDu" placeholder="0"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+        </div>
+        <div class="info-row" style="flex-direction: column; gap: 8px; margin-top:10px;">
+          <label style="font-size:12px; color:#64748b;">Retard (jours)</label>
+          <input type="number" [(ngModel)]="newClient.retard" placeholder="0"
+            style="padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+        </div>
+      </div>
+
+      <div class="drawer-section action-section">
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button class="action-btn secondary" (click)="fermerFormulaire()" style="flex: 1;">
+            Annuler
+          </button>
+          <button class="action-btn primary" (click)="sauvegarderClient()" style="flex: 1;">
+            ✅ Créer le dossier
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,280 @@
+<div class="page active">
+  <div class="tb">
+    <div class="pt">Gestion des relances</div>
+    <div class="ta">
+      <button class="btn" (click)="exporterExcel()">↑ Exporter historique</button>
+      <button class="btn bp" routerLink="/generer-token">+ Générer token</button>
+    </div>
+  </div>
+
+  <div class="kg" style="grid-template-columns: repeat(3, 1fr)">
+  <div class="kpi">
+    <div class="kl">Total relances envoyées</div>
+    <div class="kv">{{ kpis.totalEnvoyees }}</div>
+  </div>
+  <div class="kpi kw">
+    <div class="kl">En attente de réponse</div>
+    <div class="kv">{{ kpis.enAttenteReponse }}</div>
+    <div class="ks">sans réponse client</div>
+  </div>
+  <div class="kpi kok">
+    <div class="kl">Formulaires soumis</div>
+    <div class="kv">{{ kpis.formulairesSoumis }}</div>
+    <div class="ks">taux réponse {{ kpis.tauxReponse }}%</div>
+  </div>
+</div>
+
+  <div class="relance-grid" style="display: block;">
+
+    <div class="channels-container">
+      <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">Les 3 canaux de relance disponibles</div>
+
+      <div class="channels-cards">
+       
+      <div class="ch-card">
+  <div class="ch-icon">📞</div>
+  <div class="ch-stats">
+    <div><div class="ch-v">{{ canaux.appels }}</div><div class="ch-l">appels</div></div>
+    <div><div class="ch-v">{{ canaux.appelsDecroches }}</div><div class="ch-l">décrochés</div></div>
+    <div><div class="ch-v">{{ canaux.appelsNonJoignables }}</div><div class="ch-l">non joignables</div></div>
+  </div>
+  <button class="btn" style="border: 2px solid #1e293b; font-weight: 600; width: 100%;" (click)="enregistrerAppel()">
+    Enregistrer un appel
+  </button>
+</div>
+
+<div class="ch-card">
+  <div class="ch-icon">💬 SMS</div>
+  <div class="ch-stats">
+    <div><div class="ch-v">{{ canaux.smsEnvoyes }}</div><div class="ch-l">envoyés</div></div>
+    <div><div class="ch-v">{{ canaux.smsRepondus }}</div><div class="ch-l">répondus</div></div>
+    <div><div class="ch-v">{{ canaux.smsEnAttente }}</div><div class="ch-l">en attente</div></div>
+  </div>
+  <button class="btn" style="border: 2px solid #1e293b; font-weight: 600; width: 100%;" (click)="envoyerSMS()">
+    Envoyer un SMS de relance
+  </button>
+</div>
+
+<div class="ch-card">
+  <div class="ch-icon">✉️</div>
+  <div class="ch-stats">
+    <div><div class="ch-v">{{ canaux.emailsEnvoyes }}</div><div class="ch-l">envoyés</div></div>
+    <div><div class="ch-v">{{ canaux.emailsRepondus }}</div><div class="ch-l">répondus</div></div>
+    <div><div class="ch-v">{{ canaux.emailsEnAttente }}</div><div class="ch-l">en attente</div></div>
+  </div>
+  <button class="btn" style="border: 2px solid #1e293b; font-weight: 600; width: 100%;" (click)="envoyerEmail()">
+    Envoyer email de relance
+  </button>
+</div>
+
+       
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items:flex-end; margin-bottom: 16px;">
+    <h3 style="margin:0; font-weight:600; color:#1e293b; font-size:18px;">Historique des relances — SMS & Email</h3>
+
+    <div class="fb" style="margin: 0; gap: 5px;">
+      <select style="min-width: 120px;">
+        <option value="">Tous les canaux</option>
+      </select>
+      <select style="min-width: 120px;">
+        <option value="">Tous les statuts</option>
+      </select>
+    </div>
+  </div>
+  <select [(ngModel)]="filterCanal" (change)="loadDashboard()" style="min-width: 120px;">
+  <option value="Tous">Tous les canaux</option>
+  <option value="sms">SMS</option>
+  <option value="email">Email</option>
+  <option value="appel">Appel</option>
+</select>
+<select [(ngModel)]="filterStatut" (change)="loadDashboard()" style="min-width: 120px;">
+  <option value="Tous">Tous les statuts</option>
+  <option value="envoye">Envoyé</option>
+  <option value="repondu">Répondu</option>
+  <option value="sans_reponse">Sans réponse</option>
+</select>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th>N° Dossier</th>
+          <th>Client</th>
+          <th>Téléphone</th>
+          <th>Email</th>
+          <th>Canal</th>
+          <th>Date envoi</th>
+          <th>Token</th>
+          <th>Validité</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+     <tbody>
+  <tr *ngFor="let h of historique">
+    <td>#{{ h.idDossier }}</td>
+    <td style="font-weight:500">{{ h.client }}</td>
+    <td>{{ h.telephone }}</td>
+    <td>{{ h.email }}</td>
+    <td>{{ h.canal }}</td>
+    <td>{{ h.dateRelance | date:'dd/MM/yyyy' }}</td>
+    <td style="font-family: monospace;">{{ h.token }}</td>
+    <td>
+      <span *ngIf="h.dateExpiration" [style.color]="isExpired(h.dateExpiration) ? '#ef4444' : '#10b981'" style="font-size: 11px; font-weight: 600;">
+        {{ h.dateExpiration | date:'dd/MM' }}
+        <span *ngIf="isExpired(h.dateExpiration)"> (Exp)</span>
+      </span>
+      <span *ngIf="!h.dateExpiration">—</span>
+    </td>
+    <td>
+      <span class="b"
+        [ngClass]="h.statut==='repondu' ? 'bok' : h.statut==='envoye' ? 'bw' : 'bg'">
+        {{ h.statut }}
+      </span>
+    </td>
+   
+    <td>
+<span class="al" (click)="ouvrirModalRelance(h)">Relancer</span>
+       
+        <span class="al" *ngIf="h.statut === 'repondu'" (click)="archiver(h)">Archiver</span>
+    </td>
+  </tr>
+</tbody>
+    </table>
+  </div>
+
+  <div class="pag">
+    <div class="pg">«</div>
+    <div class="pg">‹</div>
+    <div class="pg active">1</div>
+    <div class="pg">2</div>
+    <div class="pg">3</div>
+    <div class="pg">›</div>
+    <div class="pg">»</div>
+  </div>
+
+  <!-- ===== MODALE : Enregistrer un appel ===== -->
+  <div class="rl-overlay" *ngIf="showModalAppel" (click)="annulerModal()">
+    <div class="rl-modal" (click)="$event.stopPropagation()">
+      <div class="rl-modal-header">
+        <span class="rl-modal-icon">📞</span>
+        <h3>Enregistrer un appel</h3>
+      </div>
+      <div class="rl-modal-body">
+        <div class="rl-field">
+          <label>Numéro de dossier <span class="req">*</span></label>
+          <input [(ngModel)]="formAppel.idDossier" type="text" placeholder="Ex: 42"
+                 [class.rl-input-error]="errorsAppel.idDossier">
+          <span class="rl-error-msg" *ngIf="errorsAppel.idDossier">Ce champ est obligatoire.</span>
+        </div>
+        <div class="rl-field">
+          <label>Résultat de l'appel <span class="req">*</span></label>
+          <select [(ngModel)]="formAppel.resultat" [class.rl-input-error]="errorsAppel.resultat">
+            <option value="">-- Choisir --</option>
+            <option value="decroché">Décroché</option>
+            <option value="non_joignable">Non joignable</option>
+            <option value="messagerie">Messagerie</option>
+          </select>
+          <span class="rl-error-msg" *ngIf="errorsAppel.resultat">Veuillez sélectionner un résultat.</span>
+        </div>
+        <div class="rl-field">
+          <label>Note / Commentaire</label>
+          <textarea [(ngModel)]="formAppel.note" rows="3" placeholder="Remarques éventuelles..."></textarea>
+        </div>
+      </div>
+      <div class="rl-modal-footer">
+        <button class="rl-btn-cancel" (click)="annulerModal()">Annuler</button>
+        <button class="rl-btn-submit" (click)="soumettreAppel()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE : Envoyer SMS ===== -->
+  <div class="rl-overlay" *ngIf="showModalSMS" (click)="annulerModal()">
+    <div class="rl-modal" (click)="$event.stopPropagation()">
+      <div class="rl-modal-header">
+        <span class="rl-modal-icon">💬</span>
+        <h3>Envoyer un SMS de relance</h3>
+      </div>
+      <div class="rl-modal-body">
+        <div class="rl-field">
+          <label>Numéro de dossier <span class="req">*</span></label>
+          <input [(ngModel)]="formSMS.idDossier" type="text" placeholder="Ex: 42"
+                 [class.rl-input-error]="errorsSMS.idDossier">
+          <span class="rl-error-msg" *ngIf="errorsSMS.idDossier">Ce champ est obligatoire.</span>
+        </div>
+        <div class="rl-field">
+          <label>Message SMS <span class="req">*</span></label>
+          <textarea [(ngModel)]="formSMS.message" rows="4"
+                    placeholder="Saisir le message à envoyer au client..."
+                    [class.rl-input-error]="errorsSMS.message"></textarea>
+          <span class="rl-error-msg" *ngIf="errorsSMS.message">Le message ne peut pas être vide.</span>
+        </div>
+      </div>
+      <div class="rl-modal-footer">
+        <button class="rl-btn-cancel" (click)="annulerModal()">Annuler</button>
+        <button class="rl-btn-submit" (click)="soumettresSMS()">Envoyer le SMS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE : Envoyer Email ===== -->
+  <div class="rl-overlay" *ngIf="showModalEmail" (click)="annulerModal()">
+    <div class="rl-modal" (click)="$event.stopPropagation()">
+      <div class="rl-modal-header">
+        <span class="rl-modal-icon">✉️</span>
+        <h3>Envoyer un email de relance</h3>
+      </div>
+      <div class="rl-modal-body">
+        <div class="rl-field">
+          <label>Numéro de dossier <span class="req">*</span></label>
+          <input [(ngModel)]="formEmail.idDossier" type="text" placeholder="Ex: 42"
+                 [class.rl-input-error]="errorsEmail.idDossier">
+          <span class="rl-error-msg" *ngIf="errorsEmail.idDossier">Ce champ est obligatoire.</span>
+        </div>
+        <div class="rl-field">
+          <label>Objet de l'email <span class="req">*</span></label>
+          <input [(ngModel)]="formEmail.objet" type="text" placeholder="Ex: Rappel échéance impayée"
+                 [class.rl-input-error]="errorsEmail.objet">
+          <span class="rl-error-msg" *ngIf="errorsEmail.objet">L'objet est obligatoire.</span>
+        </div>
+        <div class="rl-field">
+          <label>Contenu de l'email <span class="req">*</span></label>
+          <textarea [(ngModel)]="formEmail.contenu" rows="5"
+                    placeholder="Rédigez le contenu de l'email..."
+                    [class.rl-input-error]="errorsEmail.contenu"></textarea>
+          <span class="rl-error-msg" *ngIf="errorsEmail.contenu">Le contenu ne peut pas être vide.</span>
+        </div>
+      </div>
+      <div class="rl-modal-footer">
+        <button class="rl-btn-cancel" (click)="annulerModal()">Annuler</button>
+        <button class="rl-btn-submit" (click)="soumettreEmail()">Envoyer l'email</button>
+      </div>
+    </div>
+  </div>
+<!-- ===== MODALE : Envoyer message relance ===== -->
+<div class="rl-overlay" *ngIf="showModalRelance" (click)="annulerModal()">
+  <div class="rl-modal" (click)="$event.stopPropagation()">
+    <div class="rl-modal-header">
+      <span class="rl-modal-icon">💬</span>
+      <h3>Relancer — {{ relanceSelectionnee?.client }}</h3>
+    </div>
+    <div class="rl-modal-body">
+      <div class="rl-field">
+        <label>Message pour le client <span class="req">*</span></label>
+        <textarea [(ngModel)]="messageRelance" rows="4"
+          placeholder="Ex: Votre échéance est en retard, veuillez régulariser..."
+          [class.rl-input-error]="erreurMessageRelance"></textarea>
+        <span class="rl-error-msg" *ngIf="erreurMessageRelance">Le message ne peut pas être vide.</span>
+      </div>
+    </div>
+    <div class="rl-modal-footer">
+      <button class="rl-btn-cancel" (click)="annulerModal()">Annuler</button>
+      <button class="rl-btn-submit" (click)="envoyerRelanceMessage()">Envoyer</button>
+    </div>
+  </div>
+</div>
+</div>

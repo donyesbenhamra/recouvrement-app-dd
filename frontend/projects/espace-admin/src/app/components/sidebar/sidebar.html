@@ -1,0 +1,73 @@
+<div class="sidebar-container">
+  <div class="sb-header">
+    <div class="logo-stack">
+      <div class="logo-text-inline">
+      
+        <img src="assets/OIP-removebg-preview.png" alt="Icon" class="logo-symbol-xl">
+      </div>
+      <div class="logo-divider"></div>
+     
+    </div>
+  </div>
+
+  <div class="sb-menu">
+    <div class="sb-section">Principal</div>
+    <div class="sb-item" [class.active]="isActive('dashboard')" routerLink="/dashboard">
+      <span class="sb-icon">📊</span>
+      <span class="sb-text">Tableau de bord</span>
+    </div>
+
+    <div class="sb-section">Dossiers</div>
+    <div class="sb-item sub" [class.active]="isActive('clients')" routerLink="/clients">
+      <span class="sb-icon">👥</span>
+      <span class="sb-text">Liste des clients</span>
+    </div>
+    <div class="sb-item sub" [class.active]="isActive('impayes')" routerLink="/impayes">
+      <span class="sb-icon">⚠️</span>
+      <span class="sb-text">Impayés</span>
+      <span class="notif-badge" *ngIf="notifService.counts().impayes > 0">{{ notifService.counts().impayes }}</span>
+    </div>
+    <div class="sb-item sub" [class.active]="isActive('relances')" routerLink="/relances">
+      <span class="sb-icon">📢</span>
+      <span class="sb-text">Relances</span>
+      <span class="notif-badge secondary" *ngIf="notifService.counts().relances > 0">{{ notifService.counts().relances
+        }}</span>
+    </div>
+    <div class="sb-item sub" [class.active]="isActive('intentions')" routerLink="/intentions">
+      <span class="sb-icon">📝</span>
+      <span class="sb-text">Réponse d'intention</span>
+      <span class="notif-badge" *ngIf="notifService.counts().intentions > 0">{{ notifService.counts().intentions
+        }}</span>
+    </div>
+    <div class="sb-item sub" [class.active]="isActive('scoring')" routerLink="/scoring">
+      <span class="sb-icon">🤖</span>
+      <span class="sb-text">Scoring IA</span>
+    </div>
+
+    <div class="sb-section">Admin</div>
+    <div class="sb-item" [class.active]="isActive('users')" routerLink="/users">
+      <span class="sb-icon">⚙️</span>
+      <span class="sb-text">Utilisateurs</span>
+    </div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="theme-toggle" (click)="toggleTheme()"
+      [title]="themeService.isDarkMode() ? 'Passer au clair' : 'Passer au sombre'">
+      <span class="theme-icon">{{ themeService.isDarkMode() ? '🌞' : '🌙' }}</span>
+      <span class="theme-text">{{ themeService.isDarkMode() ? 'Light Mode' : 'Dark Mode' }}</span>
+    </div>
+
+    <div class="sb-user" *ngIf="currentUser">
+      <div class="sb-av">{{ currentUser.prenom[0] }}{{ currentUser.nom[0] }}</div>
+      <div class="sb-user-details">
+        <div class="sb-un">{{ currentUser.prenom }} {{ currentUser.nom }}</div>
+        <div class="sb-ur">{{ currentUser.role }}</div>
+      </div>
+      <button class="logout-btn" (click)="logout()">
+        <span>🚪</span>
+        <span style="font-size: 10px; font-weight: 700;">DECONNEXION</span>
+      </button>
+    </div>
+  </div>
+</div>

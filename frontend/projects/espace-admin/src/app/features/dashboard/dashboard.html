@@ -1,0 +1,111 @@
+<div class="page">
+
+  <!-- Header -->
+  <div class="tb">
+    <div class="pt">Tableau de bord</div>
+    
+  </div>
+
+  <!-- KPIs -->
+  <div class="kg">
+  <div class="kg">
+    <div class="kpi clickable" (click)="filterByKpi('tous')">
+      <div class="kl">Dossiers actifs</div>
+      <div class="kv">{{ stats.dossiersActifs }}</div>
+    </div>
+    <div class="kpi kd clickable" (click)="filterByKpi('impayes')">
+      <div class="kl">Montant total impayé</div>
+      <div class="kv">{{ stats.totalImpaye.toLocaleString() }} DT</div>
+    </div>
+    <div class="kpi kok" (click)="filterByKpi('intentions')">
+      <div class="kl">Taux de réponse</div>
+      <div class="kv">63%</div>
+    </div>
+    <div class="kpi kw clickable" (click)="filterByKpi('urgents')">
+      <div class="kl">Dossiers urgents</div>
+      <div class="kv">{{ stats.dossiersUrgents }}</div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Grille principale : table + sidebar -->
+  <div class="dg">
+
+    <!-- Colonne gauche : tableau prioritaires -->
+    <div>
+      <div class="sh">
+        <div class="st">Dossiers prioritaires</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <button class="fb-btn active" (click)="setFilter('tous', $event)">Tous</button>
+          <button class="fb-btn danger" (click)="setFilter('eleve', $event)">Élevé</button>
+          <button class="fb-btn warn" (click)="setFilter('moyen', $event)">Moyen</button>
+          <button class="fb-btn ok" (click)="setFilter('faible', $event)">Faible</button>
+          <span class="al" (click)="goClients()">Voir tous →</span>
+        </div>
+      </div>
+
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Type de crédit</th>
+              <th>Montant</th>
+              <th>Score</th>
+              <th>Risque</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of filteredDossiers" [class.pulse-row]="d.score >= 85">
+              <td style="font-weight:500">{{ d.client }}</td>
+              <td>{{ d.type }}</td>
+              <td>{{ d.montant }}</td>
+              <td><strong>{{ d.score }}</strong></td>
+              <td>
+                <span class="b" [ngClass]="d.badgeClass" [class.danger]="d.score >= 85">{{ d.risque }}</span>
+              </td>
+              <td>
+                <button class="btn bs" [ngClass]="d.score >= 70 ? 'bp' : ''" (click)="traiter(d.id)">Traiter</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Colonne droite : graphique + statuts -->
+    <div class="side-col">
+
+      <!-- Graphique barres -->
+      <div class="card">
+        <div class="card-label">Évolution mensuelle — Recouvrement</div>
+        <div class="bar-chart">
+          <div class="bar-wrap" *ngFor="let bar of chartData">
+            <div class="bar" [style.height]="bar.height"></div>
+            <div class="bar-lbl">{{ bar.month }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statuts des dossiers -->
+      <div class="card">
+        <div class="card-label">Statuts des dossiers</div>
+        <div class="stat-row">
+          <span class="stat-label">Régularisé</span>
+          <span class="stat-val ok">94</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Amiable</span>
+          <span class="stat-val warn">136</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Contentieux</span>
+          <span class="stat-val danger">18</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
