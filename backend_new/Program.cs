@@ -5,6 +5,7 @@ using System.Text;
 using RecouvrementAPI.Data;
 using QuestPDF.Infrastructure;
 using RecouvrementAPI.Controllers;
+using RecouvrementAPI.Models_AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,6 @@ var serverVersion = new MySqlServerVersion(new Version(8, 0, 31));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, serverVersion));
 
-// ✅ EmailService enregistré correctement
 builder.Services.AddSingleton<EmailService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -50,6 +50,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient<OllamaRiskService>(); // ✅ ici
 
 var app = builder.Build();
 
