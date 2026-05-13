@@ -51,7 +51,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddHttpClient<OllamaRiskService>(); // ✅ ici
-
+builder.Services.AddHttpClient("FastAPI", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:8000");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

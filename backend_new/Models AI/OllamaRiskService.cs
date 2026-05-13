@@ -11,7 +11,7 @@ namespace RecouvrementAPI.Models_AI
         public OllamaRiskService(HttpClient http)
         {
             _http = http;
-            _http.Timeout = TimeSpan.FromSeconds(180); // ← augmenté
+            _http.Timeout = TimeSpan.FromSeconds(600); // ← augmenté
         }
 
         public async Task<RiskScoreResult> CalculerScoreRisque(DossierRiskDto d)

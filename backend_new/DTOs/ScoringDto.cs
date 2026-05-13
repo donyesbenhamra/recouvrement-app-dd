@@ -45,6 +45,9 @@ namespace RecouvrementAPI.DTOs
         public string Recommandation { get; set; }
         public string DateCalcul { get; set; }
         public int ConfianceIa { get; set; }
+        public decimal ProbFaible { get; set; }
+public decimal ProbMoyen { get; set; }
+public decimal ProbEleve { get; set; }
     }
 
     public class ScoringDashboardResponseDto
