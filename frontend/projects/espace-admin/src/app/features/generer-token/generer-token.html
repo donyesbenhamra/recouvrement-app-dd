@@ -7,11 +7,8 @@
     style="padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 12px; border: 1px solid #e2e8f0; background: white;">
 
     <!-- Client & dossier -->
-    <div class="form-group">
-      <label style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block;">
-        Client & dossier <span style="color:#ef4444">*</span>
-      </label>
-    <div class="form-group">
+    <!-- Client & dossier -->
+<div class="form-group">
   <label style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: block;">
     Email du client <span style="color:#ef4444">*</span>
   </label>
@@ -19,7 +16,7 @@
     (blur)="rechercherClient()"
     [style.border]="errorClient ? '2px solid #ef4444' : '2px solid #e2e8f0'"
     style="width: 100%; padding: 12px; font-size: 14px; border-radius: 8px; outline:none;">
-  
+
   <!-- Client trouvé -->
   <div *ngIf="clientTrouve" style="margin-top:8px; padding:10px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px; font-size:13px; color:#166534;">
     ✅ {{ clientTrouve.client }} — Dossier #{{ clientTrouve.idDossier }} — {{ clientTrouve.typeCredit }}
@@ -34,11 +31,6 @@
     ⚠ Veuillez saisir un email valide.
   </div>
 </div>
-      <div *ngIf="errorClient"
-        style="margin-top:5px; font-size:12px; color:#ef4444; font-weight:600; display:flex; align-items:center; gap:4px;">
-        ⚠ Veuillez sélectionner un client.
-      </div>
-    </div>
 
     <!-- Canal d'envoi -->
     <div style="margin-top: 20px;">
