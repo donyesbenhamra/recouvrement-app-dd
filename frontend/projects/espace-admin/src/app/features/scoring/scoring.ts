@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
@@ -11,7 +11,8 @@ import { ActivatedRoute } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './scoring.html',
-  styleUrl: './scoring.css'
+  styleUrl: './scoring.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ScoringComponent implements OnInit {
 
@@ -19,6 +20,7 @@ export class ScoringComponent implements OnInit {
   scanningStep = '';
   scanningProgress = 0;
   recherche = '';
+  filtreEtat = '';   // ← variable séparée pour le select
 
   dossiers: any[] = [];
   kpis = { dossiersScores: 0, risqueEleve: 0, risqueMoyen: 0, risqueFaible: 0 };
@@ -52,7 +54,7 @@ export class ScoringComponent implements OnInit {
           this.dossiers = tousLesDossiers;
         }
 
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       },
       error: (err: any) => {
         console.error('Erreur:', err);
@@ -66,22 +68,23 @@ export class ScoringComponent implements OnInit {
     this.isScanning = true;
     this.scanningProgress = 0;
     this.scanningStep = 'Chargement des données historiques...';
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
 
-    setTimeout(() => { this.scanningProgress = 30; this.scanningStep = 'Analyse des garanties...';         this.cdr.detectChanges(); }, 600);
-    setTimeout(() => { this.scanningProgress = 60; this.scanningStep = 'Calcul probabilité de défaut...'; this.cdr.detectChanges(); }, 1200);
-    setTimeout(() => { this.scanningProgress = 90; this.scanningStep = 'Génération recommandations...';   this.cdr.detectChanges(); }, 1800);
+   setTimeout(() => { this.scanningProgress = 30; this.scanningStep = 'Analyse des garanties...';         this.cdr.markForCheck(); }, 200);
+setTimeout(() => { this.scanningProgress = 60; this.scanningStep = 'Calcul probabilité de défaut...'; this.cdr.markForCheck(); }, 400);
+setTimeout(() => { this.scanningProgress = 90; this.scanningStep = 'Génération recommandations...';   this.cdr.markForCheck(); }, 600);
 
-    setTimeout(() => {
-      this.apiService.getScoringDetails(d.idDossier).subscribe({
+setTimeout(() => {
+  this.apiService.getScoringDetails(d.idDossier).subscribe({
         next: details => {
           this.selectedDossier = details;
           console.log('details scoring:', details);
           this.isScanning = false;
-          this.cdr.detectChanges();
+          this.cdr.markForCheck();
         },
         error: () => {
           this.isScanning = false;
+          this.cdr.markForCheck();
           this.toastService.show('Erreur chargement détails', 'error');
         }
       });

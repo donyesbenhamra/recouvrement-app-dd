@@ -39,7 +39,7 @@
     <select [(ngModel)]="filterStatut" (change)="loadClients()">
       <option value="">Statut</option>
       <option value="contentieux">Contentieux</option>
-      <option value="aimable">Amiable</option>
+      <option value="amiable">Amiable</option>
       <option value="regularise">Régularisé</option>
     </select>
     <select [(ngModel)]="filterAgence" (change)="loadClients()">
@@ -131,11 +131,11 @@
 </div>
   <span class="al" (click)="voirFiche(c)">Fiche</span>
   <span class="al" 
-        *ngIf="c.montantDu === 0"
-        (click)="archiver(c.idDossier)"
-        style="color:#10b981; font-weight:600; cursor:pointer;">
-    Archiver
-  </span>
+      *ngIf="c.statut === 'Regularise' && c.montantDu === 0"
+      (click)="archiver(c.idDossier)"
+      style="color:#10b981; font-weight:600; cursor:pointer;">
+  Archiver
+</span>
 </td>
  
          

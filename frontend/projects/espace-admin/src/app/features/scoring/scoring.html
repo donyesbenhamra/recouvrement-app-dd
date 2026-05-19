@@ -37,7 +37,7 @@
   <div class="scoring-grid">
     <div>
       <div class="filters-row">
-        <select [(ngModel)]="recherche" (change)="loadDashboard()">
+        <select [(ngModel)]="filtreEtat" (change)="loadDashboard()">
           <option value="">État du Dossier</option>
           <option value="amiable">Amiable</option>
           <option value="contentieux">Contentieux</option>
@@ -103,7 +103,7 @@
     </div>
 
     <!-- Right Panel -->
-    <div class="side-panel" *ngIf="selectedDossier">
+    <div class="side-panel" *ngIf="selectedDossier && !isScanning">
       <div class="panel-card">
         <div class="panel-title">
           Détail du Score
@@ -114,43 +114,39 @@
           </span>
         </div>
 
-        <!-- Détails ligne par ligne -->
-       
-
-
-
-       <div class="formula-box" *ngIf="selectedDossier.probEleve > 0 || selectedDossier.probMoyen > 0 || selectedDossier.probFaible > 0">
-  <strong style="display:block; margin-bottom:10px;">Analyse XGBoost — Probabilités</strong>
-  <div style="display:flex; flex-direction:column; gap:8px;">
-    <div>
-      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-        <span style="color:#ef4444; font-weight:600;">Risque Élevé</span>
-        <span style="font-weight:700;">{{ (selectedDossier.probEleve * 100).toFixed(1) }}%</span>
-      </div>
-      <div style="background:#fee2e2; border-radius:4px; height:8px;">
-        <div style="background:#ef4444; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probEleve * 100"></div>
-      </div>
-    </div>
-    <div>
-      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-        <span style="color:#f59e0b; font-weight:600;">Risque Moyen</span>
-        <span style="font-weight:700;">{{ (selectedDossier.probMoyen * 100).toFixed(1) }}%</span>
-      </div>
-      <div style="background:#fef3c7; border-radius:4px; height:8px;">
-        <div style="background:#f59e0b; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probMoyen * 100"></div>
-      </div>
-    </div>
-    <div>
-      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
-        <span style="color:#10b981; font-weight:600;">Risque Faible</span>
-        <span style="font-weight:700;">{{ (selectedDossier.probFaible * 100).toFixed(1) }}%</span>
-      </div>
-      <div style="background:#dcfce7; border-radius:4px; height:8px;">
-        <div style="background:#10b981; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probFaible * 100"></div>
-      </div>
-    </div>
-  </div>
-</div>
+        <!-- Analyse IA — Probabilités (sans *ngIf bloquant) -->
+        <div class="formula-box">
+          <strong style="display:block; margin-bottom:10px;">Analyse IA — Probabilités</strong>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+                <span style="color:#ef4444; font-weight:600;">Risque Élevé</span>
+                <span style="font-weight:700;">{{ (selectedDossier.probEleve * 100).toFixed(1) }}%</span>
+              </div>
+              <div style="background:#fee2e2; border-radius:4px; height:8px;">
+                <div style="background:#ef4444; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probEleve * 100"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+                <span style="color:#f59e0b; font-weight:600;">Risque Moyen</span>
+                <span style="font-weight:700;">{{ (selectedDossier.probMoyen * 100).toFixed(1) }}%</span>
+              </div>
+              <div style="background:#fef3c7; border-radius:4px; height:8px;">
+                <div style="background:#f59e0b; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probMoyen * 100"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+                <span style="color:#10b981; font-weight:600;">Risque Faible</span>
+                <span style="font-weight:700;">{{ (selectedDossier.probFaible * 100).toFixed(1) }}%</span>
+              </div>
+              <div style="background:#dcfce7; border-radius:4px; height:8px;">
+                <div style="background:#10b981; border-radius:4px; height:8px;" [style.width.%]="selectedDossier.probFaible * 100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Recommandation -->
@@ -177,7 +173,6 @@
         <div class="scan-progress-fill" [style.width.%]="scanningProgress"></div>
       </div>
       <div class="scanning-footer">Veuillez ne pas fermer cette fenêtre pendant le traitement</div>
-      <!-- TEST GIT -->
     </div>
   </div>
 </div>

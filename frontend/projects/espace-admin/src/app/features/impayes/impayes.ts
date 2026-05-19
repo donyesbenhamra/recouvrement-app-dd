@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
 import { ApiService } from '../../services/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-impayes',
@@ -20,7 +21,7 @@ export class ImpayesComponent implements OnInit  {
   impayes: any[] = [];
   kpis = { totalImpaye: 0, interetsDus: 0, totalARecouvrer: 0, dejaRecupere: 0, tauxRecuperation: 0 };
 
-  constructor(private toastService: ToastService, private apiService: ApiService,private cdr: ChangeDetectorRef) { }
+  constructor(private toastService: ToastService, private apiService: ApiService,private cdr: ChangeDetectorRef, private router: Router ) { }
 
   ngOnInit() {
     this.apiService.getImpayesGestion().subscribe(res => {
@@ -68,9 +69,10 @@ export class ImpayesComponent implements OnInit  {
   relancer(i: any) {
     this.toastService.show(`✅ Relance automatique envoyée à ${i.nom}`, "success");
   }
-
   voir(i: any) {
-    this.toastService.show(`Ouverture du dossier ${i.ref}...`, "info");
+  this.toastService.show(`Ouverture du dossier #${i.idDossier}...`, "info");
+  this.router.navigate(['/fiche', i.idDossier]);
+
   }
 
   exporterPDF() {

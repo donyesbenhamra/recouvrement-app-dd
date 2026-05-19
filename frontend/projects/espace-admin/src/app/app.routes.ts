@@ -22,5 +22,7 @@ export const routes: Routes = [
   { path: 'intentions', component: IntentionsComponent },
   { path: 'scoring', component: ScoringComponent },
   { path: 'users', component: UsersComponent },
-  { path: '**', redirectTo: 'login' }
+   { path: 'dossier/:id', component: FicheClientComponent },
+  { path: '**', redirectTo: 'login' },
+  
 ];

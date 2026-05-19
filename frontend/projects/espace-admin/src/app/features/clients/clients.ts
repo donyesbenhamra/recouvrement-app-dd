@@ -51,6 +51,7 @@ export class ClientsComponent implements OnInit {
   loadClients() {
     this.apiService.getClientsGestion(this.filterStatut, this.filterAgence, this.currentPage).subscribe(res => {
       this.clients = res.items;
+       console.log('statuts:', res.items.map((c: any) => c.statut));
       this.totalPages = res.totalPages;
       this.currentPage = res.currentPage;
       this.stats = {

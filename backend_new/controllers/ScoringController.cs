@@ -200,7 +200,7 @@ namespace RecouvrementAPI.Controllers
         {
             bool ok = await RunScoringAlgorithm(id);
             if (!ok) return StatusCode(503, new { message = "Service IA indisponible. Vérifiez que FastAPI tourne sur le port 8000." });
-            return Ok(new { message = "Score XGBoost mis à jour avec succès." });
+           return Ok(new { message = "Score de risque mis à jour avec succès." });
         }
 
         // ══════════════════════════════════════════════════════════════════════
