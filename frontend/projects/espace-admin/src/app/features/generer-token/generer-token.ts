@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -14,15 +14,17 @@ import { ApiService } from '../../services/api.service';
 })
 export class GenererTokenComponent {
 
-  emailClient    = '';
-  selectedCanal  = 'E-mail';
-  generatedLink  = 'https://recouvrement.stbbank.tn/formulaire/d8f3a9e...';
+  nomCompletClient = '';
+  emailClient      = '';
+  selectedCanal    = 'E-mail';
+  generatedLink    = 'https://recouvrement.stbbank.tn/formulaire/d8f3a9e...';
 
   clientTrouve:    any     = null;
   clientNonTrouve: boolean = false;
   recherche:       boolean = false;
 
   errorClient = false;
+  errorEmail  = false;
   errorCanal  = false;
 
   constructor(
@@ -47,7 +49,11 @@ export class GenererTokenComponent {
         if (found) {
           this.clientTrouve    = found;
           this.clientNonTrouve = false;
-          this.errorClient     = false;
+          this.errorEmail      = false;
+          // Auto-remplir nom complet si vide
+          if (!this.nomCompletClient && found.client) {
+            this.nomCompletClient = found.client;
+          }
         } else {
           this.clientTrouve    = null;
           this.clientNonTrouve = true;
@@ -65,11 +71,17 @@ export class GenererTokenComponent {
   }
 
   generer() {
-    this.errorClient = !this.clientTrouve;
+    this.errorClient = !this.nomCompletClient.trim();
+    this.errorEmail  = !this.emailClient.trim();
     this.errorCanal  = !this.selectedCanal;
 
-    if (this.errorClient || this.errorCanal) {
+    if (this.errorClient || this.errorEmail || this.errorCanal) {
       this.toastService.show('Veuillez remplir tous les champs obligatoires.', 'error');
+      return;
+    }
+
+    if (!this.clientTrouve) {
+      this.toastService.show('Veuillez valider le client via son email.', 'error');
       return;
     }
 

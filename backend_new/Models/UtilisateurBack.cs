@@ -47,7 +47,7 @@ namespace RecouvrementAPI.Models
 
         [Column("telephone")]
         [MaxLength(20)]
-        public string? Telephone { get; set; }
+        public string Telephone { get; set; }
 
         [Column("statut")]
         [MaxLength(20)]

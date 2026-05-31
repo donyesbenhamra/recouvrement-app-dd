@@ -1,0 +1,70 @@
+{
+  "features": [
+    "montant_initial",
+    "montant_impaye",
+    "frais_dossier",
+    "taux_interet",
+    "confiance_client",
+    "jours_depuis_creation",
+    "type_emprunt_enc",
+    "statut_dossier_enc",
+    "nb_echeances_total",
+    "nb_echeances_impayees",
+    "moyenne_jours_retard",
+    "montant_total_du",
+    "nb_garanties",
+    "nb_actions",
+    "nb_intentions",
+    "montant_propose_moyen",
+    "confiance_intention_moy",
+    "ratio_impaye",
+    "charge_frais",
+    "taux_recouvrement",
+    "ratio_echeances_imp",
+    "couverture_intention",
+    "intensite_actions",
+    "confiance_globale"
+  ],
+  "classes": [
+    "Eleve",
+    "Faible",
+    "Moyen"
+  ],
+  "type_emprunt_classes": [
+    "automobile",
+    "immobilier",
+    "personnel",
+    "professionnel"
+  ],
+  "statut_dossier_classes": [
+    "amiable",
+    "contentieux",
+    "regularise"
+  ],
+  "metriques": {
+    "accuracy": 0.82,
+    "auc_roc": 0.9238,
+    "cv_mean": 0.796,
+    "cv_std": 0.0441
+  },
+  "comparaison_modeles": {
+    "Logistic Regression": {
+      "accuracy": 0.64,
+      "auc_roc": 0.829,
+      "cv_mean": 0.682,
+      "cv_std": 0.0293
+    },
+    "Random Forest": {
+      "accuracy": 0.75,
+      "auc_roc": 0.9212,
+      "cv_mean": 0.762,
+      "cv_std": 0.0248
+    },
+    "XGBoost": {
+      "accuracy": 0.82,
+      "auc_roc": 0.9238,
+      "cv_mean": 0.796,
+      "cv_std": 0.0441
+    }
+  }
+}

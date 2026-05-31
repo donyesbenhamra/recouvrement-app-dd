@@ -5,7 +5,7 @@ using System.Text;
 using RecouvrementAPI.Data;
 using QuestPDF.Infrastructure;
 using RecouvrementAPI.Controllers;
-using RecouvrementAPI.Models_AI;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,7 +50,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddHttpClient<OllamaRiskService>(); // ✅ ici
+
 builder.Services.AddHttpClient("FastAPI", client =>
 {
     client.BaseAddress = new Uri("http://localhost:8000");

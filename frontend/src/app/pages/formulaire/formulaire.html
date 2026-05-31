@@ -5,7 +5,6 @@
     <div class="stb-logo-container">
       <img src="assets/OIP-removebg-preview.png" alt="STB BANK" class="stb-logo-img">
     </div>
-
     <div class="client-info-badge">
       <button class="header-back-btn" (click)="retourDossiers()">
         <span>← RETOUR</span>
@@ -13,9 +12,8 @@
     </div>
   </header>
 
-
   <div class="main-body">
-    <!-- SINGLE BLUE SIDEBAR -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-title">Espace Client</div>
@@ -70,28 +68,30 @@
         </a>
       </nav>
 
-        <div class="sidebar-footer">
-          <div class="theme-toggle" (click)="toggleTheme()" 
-               [style.background]="isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc'" 
-               [style.border]="isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e2e8f0'"
-               style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div class="theme-icon" 
-                   [style.background]="isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0'"
-                   style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
-                {{ isDarkMode ? '🌙' : '☀️' }}
-              </div>
-              <span [style.color]="isDarkMode ? '#f8fafc' : '#1e293b'" style="font-size: 13px; font-weight: 600;">
-                Mode {{ isDarkMode ? 'Sombre' : 'Clair' }}
-              </span>
+      <div class="sidebar-footer">
+        <div class="theme-toggle" (click)="toggleTheme()"
+             [style.background]="isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc'"
+             [style.border]="isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e2e8f0'"
+             style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:12px;cursor:pointer;transition:all 0.2s;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="theme-icon"
+                 [style.background]="isDarkMode ? 'rgba(255,255,255,0.1)' : '#e2e8f0'"
+                 style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">
+              {{ isDarkMode ? '🌙' : '☀️' }}
             </div>
-            <div class="toggle-switch" 
-                 [style.background]="isDarkMode ? 'rgba(255,255,255,0.2)' : '#cbd5e1'"
-                 style="width: 36px; height: 20px; border-radius: 20px; position: relative;">
-              <div class="toggle-knob" style="width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);" [style.transform]="isDarkMode ? 'translateX(16px)' : 'translateX(0)'"></div>
-            </div>
+            <span [style.color]="isDarkMode ? '#f8fafc' : '#1e293b'" style="font-size:13px;font-weight:600;">
+              Mode {{ isDarkMode ? 'Sombre' : 'Clair' }}
+            </span>
+          </div>
+          <div class="toggle-switch"
+               [style.background]="isDarkMode ? 'rgba(255,255,255,0.2)' : '#cbd5e1'"
+               style="width:36px;height:20px;border-radius:20px;position:relative;">
+            <div class="toggle-knob"
+                 style="width:14px;height:14px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);"
+                 [style.transform]="isDarkMode ? 'translateX(16px)' : 'translateX(0)'"></div>
           </div>
         </div>
+      </div>
     </aside>
 
     <main class="content-area">
@@ -105,16 +105,33 @@
           </div>
         </div>
         <div class="summary-actions">
-          <span class="statut-pill large" [class]="dossier?.statutDossier?.toLowerCase()">
-            {{ dossier?.statutDossier | uppercase }}
+          <!-- ✅ Affiche CONTENTIEUX si > 180 jours, sinon le statut réel du backend -->
+          <span class="statut-pill large"
+                [class]="estContentieux ? 'contentieux' : dossier?.statutDossier?.toLowerCase()">
+            {{ estContentieux ? 'CONTENTIEUX' : (dossier?.statutDossier | uppercase) }}
           </span>
         </div>
       </div>
 
       <!-- Contenu des Onglets -->
       <div class="tab-content-wrapper">
+
         <!-- VUE D'ENSEMBLE -->
         <ng-container *ngIf="ongletActif === 'overview'">
+
+          <!-- ✅ BANDEAU CONTENTIEUX : affiché si joursRetard > 180 -->
+          <div *ngIf="estContentieux"
+            style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+            <span style="font-size:28px;">⚖️</span>
+            <div>
+              <strong style="color:#991b1b;font-size:15px;">Dossier en phase contentieuse</strong>
+              <p style="margin:4px 0 0;color:#b91c1c;font-size:13px;">
+                Votre dossier a été transféré au service contentieux suite à un retard de
+                <strong>{{ joursRetard }} jours</strong>. Veuillez contacter votre agence directement.
+              </p>
+            </div>
+          </div>
+
           <div class="grid-layout">
             <div class="stats-overview">
               <div class="stat-card-mini initial">
@@ -170,7 +187,9 @@
               </div>
             </div>
 
-            <div class="glass-section form-box" *ngIf="!submitted && !intentionExistante; else confirmationBlock">
+            <!-- ✅ FORMULAIRE : bloqué si estContentieux -->
+            <div class="glass-section form-box"
+              *ngIf="!submitted && !intentionExistante && !estContentieux; else confirmationBlock">
               <div class="section-title">Déposer une intention</div>
               <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modern-form">
                 <div class="input-grid">
@@ -195,10 +214,9 @@
 
                   <div class="input-group full">
                     <label>Email de contact <span class="required">*</span></label>
-                    <input type="email" formControlName="email" class="styled-input" placeholder="votre@email.com"
-                      required>
+                    <input type="email" formControlName="email" class="styled-input" placeholder="votre@email.com" required>
                     <div class="field-error" *ngIf="emailInvalide"
-                      style="color: #ef4444; font-size: 11px; margin-top: 5px;">
+                      style="color:#ef4444;font-size:11px;margin-top:5px;">
                       Format d'email invalide (ex: nom@domaine.com). Un reçu vous sera envoyé à cette adresse.
                     </div>
                   </div>
@@ -212,61 +230,66 @@
 
                 <div class="form-actions">
                   <button type="button" class="cancel-btn" (click)="annulerFormulaire()"
-                    style="background: transparent; border: 1px solid #cbd5e1; color: #64748b; padding: 14px 28px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    style="background:transparent;border:1px solid #cbd5e1;color:#64748b;padding:14px 28px;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s;">
                     ✕ Annuler
                   </button>
                   <button type="submit" class="submit-btn" [disabled]="form.invalid || loading">
-                    <span *ngIf="!loading">🚀 Envoyer mon intention</span>
+                    <span *ngIf="!loading">Envoyer mon intention</span>
                     <span *ngIf="loading">Envoi en cours...</span>
                   </button>
                 </div>
               </form>
             </div>
+
+            <!-- ✅ TEMPLATE ALTERNATIF -->
             <ng-template #confirmationBlock>
-              <div *ngIf="intentionExistante && afficherAvertissementDoublon"
+
+              <!-- CAS 1 : contentieux → formulaire bloqué -->
+              <div *ngIf="estContentieux"
+                class="glass-section form-box"
+                style="text-align:center;padding:30px 20px;">
+                <span style="font-size:36px;display:block;margin-bottom:12px;">🚫</span>
+                <strong style="color:#991b1b;font-size:15px;">Formulaire d'intention désactivé</strong>
+                <p style="color:#b91c1c;font-size:13px;margin-top:8px;">
+                  Les intentions ne sont plus disponibles pour un dossier en phase contentieuse.<br>
+                  Contactez directement votre agence STB.
+                </p>
+              </div>
+
+              <!-- CAS 2 : Intention déjà en cours (doublon) -->
+              <div *ngIf="intentionExistante && afficherAvertissementDoublon && !estContentieux"
                 class="alert-box warning-alert shadow-sm mb-4"
-                style="background:#fffbeb; border:1px solid #fde68a; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                <div class="alert-header" style="display:flex; align-items:center; gap: 10px; margin-bottom: 10px;">
+                style="background:#fffbeb;border:1px solid #fde68a;padding:20px;border-radius:8px;margin-top:20px;">
+                <div class="alert-header" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                   <span class="icon" style="font-size:24px;">⚠️</span>
-                  <h4 style="margin:0; color:#b45309; font-weight:bold;">Intention déjà en cours</h4>
+                  <h4 style="margin:0;color:#b45309;font-weight:bold;">Intention déjà en cours</h4>
                 </div>
-                <div class="alert-body" style="color:#92400e; font-size: 14px; margin-bottom: 15px;">
-                  Nous traitons déjà une intention de votre part :<br>
+                <div class="alert-body" style="color:#92400e;font-size:14px;">
+                  Nous traitons déjà une intention de votre part :
                   <strong>{{ intentionExistante.typeIntention }}</strong>
                   <ng-container *ngIf="intentionExistante.dateSoumission">
                     du {{ intentionExistante.dateSoumission | date:'dd/MM/yyyy' }}
                   </ng-container>.
-                  <br><br>
-                  <ng-container *ngIf="intentionExistante.statut">
-                    Statut : <span class="badge warning">{{ intentionExistante.statut }}</span>
-                  </ng-container>
-                </div>
-                <div class="alert-actions" style="display:flex; gap: 10px;">
-                  <button class="btn btn-danger btn-sm" (click)="annulerIntentionExistante()"
-                    [disabled]="intentionLoading"
-                    style="background: #ef4444; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:600; cursor:pointer;">
-                    <span *ngIf="!intentionLoading">❌ Annuler cette intention</span>
-                    <span *ngIf="intentionLoading">Annulation...</span>
-                  </button>
-                  <button class="btn btn-outline-warning btn-sm" (click)="modifierIntentionExistante()"
-                    style="background: white; color:#d97706; border:1px solid #d97706; padding:8px 15px; border-radius:4px; font-weight:600; cursor:pointer;">
-                    ✏️ Soumettre une nouvelle
-                  </button>
                 </div>
               </div>
+
+              <!-- CAS 3 : Succès -->
               <div *ngIf="submitted" class="success-celebration">
                 <h3>Intention transmise !</h3>
               </div>
+
             </ng-template>
           </div>
         </ng-container>
 
+        <!-- PAIEMENTS -->
         <ng-container *ngIf="ongletActif === 'paiements'">
           <div class="glass-section">
             <div class="section-title">Historique des transactions</div>
 
-            <div *ngIf="!dossier?.paiements || dossier?.paiements?.length === 0" style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; color: #64748b; margin-top: 15px; border: 1px dashed #cbd5e1;">
-              <span style="font-size: 24px; display: block; margin-bottom: 10px;">💵</span>
+            <div *ngIf="!dossier?.paiements || dossier?.paiements?.length === 0"
+              style="text-align:center;padding:40px;background:#f8fafc;border-radius:8px;color:#64748b;margin-top:15px;border:1px dashed #cbd5e1;">
+              <span style="font-size:24px;display:block;margin-bottom:10px;">💵</span>
               Aucun paiement n'a été effectué pour le moment.
             </div>
 
@@ -288,6 +311,7 @@
             </table>
           </div>
         </ng-container>
+
         <!-- RELANCES -->
         <ng-container *ngIf="ongletActif === 'relances'">
           <div class="timeline-container">
@@ -303,36 +327,41 @@
                   <p class="relance-text">{{ r.contenu }}</p>
 
                   <div class="relance-status-area">
-                    <span class="status-pill {{ (r.statut || '').toLowerCase() || 'envoyee' }}">{{ r.statut || 'ENVOYEE'
-                      }}</span>
+                    <span class="status-pill {{ (r.statut || '').toLowerCase() || 'envoyee' }}">
+                      {{ r.statut || 'ENVOYEE' }}
+                    </span>
                     <button *ngIf="(r.statut || '').toLowerCase() !== 'repondu'" class="reply-link-btn"
-                      (click)="ouvrirReponseRelance(r)" style="background: transparent; border: 1px solid #007bff; color: #007bff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 10px;">
+                      (click)="ouvrirReponseRelance(r)"
+                      style="background:transparent;border:1px solid #007bff;color:#007bff;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin-left:10px;">
                       ↩️ Répondre
                     </button>
                   </div>
 
                   <!-- Formulaire de réponse INLINE -->
                   <div class="inline-reply" *ngIf="relanceRepondreIndex === r.idRelance"
-                    style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <textarea [(ngModel)]="reponseRelanceTexte" placeholder="Tapez votre réponse ici..." class="styled-input"
-                      style="width: 100%; min-height: 80px; margin-bottom: 10px; padding: 10px;"></textarea>
-                    <div class="reply-actions" style="display:flex; gap:10px;">
-                      <button class="submit-btn" style="padding: 8px 16px; font-size: 13px; border-radius:6px; background: #007bff; color: white;"
+                    style="margin-top:15px;background:#f8fafc;padding:15px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <textarea [(ngModel)]="reponseRelanceTexte" placeholder="Tapez votre réponse ici..."
+                      class="styled-input"
+                      style="width:100%;min-height:80px;margin-bottom:10px;padding:10px;"></textarea>
+                    <div class="reply-actions" style="display:flex;gap:10px;">
+                      <button class="submit-btn"
+                        style="padding:8px 16px;font-size:13px;border-radius:6px;background:#007bff;color:white;"
                         (click)="envoyerReponseRelance(r)" [disabled]="relanceSending || !reponseRelanceTexte.trim()">
                         <span *ngIf="!relanceSending">Envoyer la réponse</span>
                         <span *ngIf="relanceSending">Envoi...</span>
                       </button>
                       <button class="cancel-btn"
-                        style="padding: 8px 16px; font-size: 13px; border-radius:6px; border: 1px solid #cbd5e1; background: transparent; cursor:pointer; color: #64748b;"
+                        style="padding:8px 16px;font-size:13px;border-radius:6px;border:1px solid #cbd5e1;background:transparent;cursor:pointer;color:#64748b;"
                         (click)="annulerReponseRelance()">Annuler</button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div *ngIf="!dossier?.relances || dossier?.relances?.length === 0" style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 8px; color: #64748b; margin-top: 20px;">
-              <span style="font-size: 24px; display: block; margin-bottom: 10px;">✅</span>
+
+            <div *ngIf="!dossier?.relances || dossier?.relances?.length === 0"
+              style="text-align:center;padding:40px;background:#f8fafc;border-radius:8px;color:#64748b;margin-top:20px;">
+              <span style="font-size:24px;display:block;margin-bottom:10px;">✅</span>
               Aucune relance pour ce dossier pour le moment.
             </div>
           </div>
@@ -343,78 +372,82 @@
           <div class="messaging-panel">
             <div class="section-title">Échanger avec votre conseiller</div>
 
-            <div class="messages-list" style="min-height: 200px; max-height: 480px; overflow-y: auto; padding: 20px; background: #f8fafc; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px;">
-              
-              <div *ngIf="!dossier?.communications || dossier?.communications?.length === 0" style="text-align: center; color: #94a3b8; margin-top: 40px;">
+            <div class="messages-list"
+              style="min-height:200px;max-height:480px;overflow-y:auto;padding:20px;background:#f8fafc;border-radius:8px;margin-bottom:15px;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:15px;">
+
+              <div *ngIf="!dossier?.communications || dossier?.communications?.length === 0"
+                style="text-align:center;color:#94a3b8;margin-top:40px;">
                 Aucun message n'a été échangé. Envoyez le premier message !
               </div>
 
-            <div *ngFor="let msg of dossier?.communications" class="message-wrapper"
-  [class.from-client]="msg.origine === 'client'">
-  <div class="message-bubble">
-    <div class="msg-meta" style="font-size: 11px; opacity: 0.7; margin-bottom: 5px;">
-      {{ msg.origine === 'agent' ? '🏦 Conseiller' : msg.origine === 'systeme' ? '🤖 Système' : '👤 Vous' }}
-      · {{ msg.dateEnvoi | date:'short' }}
-    </div>
-    <div class="msg-text">{{ msg.message }}</div>
-  </div>
-</div>
+              <div *ngFor="let msg of dossier?.communications" class="message-wrapper"
+                [class.from-client]="msg.origine === 'client'">
+                <div class="message-bubble">
+                  <div class="msg-meta" style="font-size:11px;opacity:0.7;margin-bottom:5px;">
+                    {{ msg.origine === 'agent' ? '🏦 Conseiller' : msg.origine === 'systeme' ? '🤖 Système' : '👤 Vous' }}
+                    · {{ msg.dateEnvoi | date:'short' }}
+                  </div>
+                  <div class="msg-text">{{ msg.message }}</div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="msg-input-area" style="background: white; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-              <form [formGroup]="messageForm" (ngSubmit)="envoyerMessage()" style="display:flex; gap:10px; width:100%;">
-                <input type="text" formControlName="message" placeholder="Écrivez votre message ici..." class="styled-input"
-                  style="flex:1; padding: 12px 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                <button type="submit" class="send-message-btn" [disabled]="messageForm.invalid || messageSending"
-                  style="background: #007bff; color: white; border: none; border-radius: 8px; padding: 0 25px; font-weight: bold; cursor: pointer; transition: background 0.2s;">
-                  <span *ngIf="!messageSending">Envoyer</span>
-                  <span *ngIf="messageSending">Envoi...</span>
-                </button>
-              </form>
-            </div>
+          <div class="msg-input-area" style="background:white;border-top:1px solid #e2e8f0;padding-top:15px;">
+            <form [formGroup]="messageForm" (ngSubmit)="envoyerMessage()" style="display:flex;gap:10px;width:100%;">
+              <input type="text" formControlName="message" placeholder="Écrivez votre message ici..."
+                class="styled-input"
+                style="flex:1;padding:12px 15px;border-radius:8px;border:1px solid #cbd5e1;">
+              <button type="submit" class="send-message-btn" [disabled]="messageForm.invalid || messageSending"
+                style="background:#007bff;color:white;border:none;border-radius:8px;padding:0 25px;font-weight:bold;cursor:pointer;transition:background 0.2s;">
+                <span *ngIf="!messageSending">Envoyer</span>
+                <span *ngIf="messageSending">Envoi...</span>
+              </button>
+            </form>
+          </div>
         </ng-container>
 
         <!-- DOCUMENTS & ACTIONS -->
         <ng-container *ngIf="ongletActif === 'actions'">
-          <div class="docs-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div class="docs-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
             <div class="doc-card"
-              style="background: white; border-radius: 12px; padding: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+              style="background:white;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
               <div class="doc-body">
-                <h4 style="margin: 0 0 5px; color:#1e293b;">État de situation</h4>
-                <p style="margin: 0; font-size: 13px; color:#64748b;">Justificatif officiel de votre solde actuel.</p>
-                <div class="pdf-error" *ngIf="pdfError.recu" style="color:red; font-size: 11px; margin-top:5px;">
+                <h4 style="margin:0 0 5px;color:#1e293b;">État de situation</h4>
+                <p style="margin:0;font-size:13px;color:#64748b;">Justificatif officiel de votre solde actuel.</p>
+                <div class="pdf-error" *ngIf="pdfError.recu" style="color:red;font-size:11px;margin-top:5px;">
                   <span>⚠️ {{ pdfError.recu }}</span>
                   <button (click)="telechargerRecu()"
                     style="border:none;background:transparent;color:#007bff;cursor:pointer;text-decoration:underline;">Réessayer</button>
                 </div>
               </div>
               <button class="icon-btn-dl" (click)="telechargerRecu()" [disabled]="pdfLoading.recu"
-                style="background: #f1f5f9; border:none; width:45px; height:45px; border-radius: 50%; font-size: 20px; cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                style="background:#f1f5f9;border:none;width:45px;height:45px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                 <span *ngIf="!pdfLoading.recu">📥</span>
                 <span *ngIf="pdfLoading.recu">⏳</span>
               </button>
             </div>
 
             <div class="doc-card"
-              style="background: white; border-radius: 12px; padding: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+              style="background:white;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
               <div class="doc-body">
-                <h4 style="margin: 0 0 5px; color:#1e293b;">Historique complet</h4>
-                <p style="margin: 0; font-size: 13px; color:#64748b;">Toutes vos actions et paiements.</p>
-                <div class="pdf-error" *ngIf="pdfError.historique" style="color:red; font-size: 11px; margin-top:5px;">
+                <h4 style="margin:0 0 5px;color:#1e293b;">Historique complet</h4>
+                <p style="margin:0;font-size:13px;color:#64748b;">Toutes vos actions et paiements.</p>
+                <div class="pdf-error" *ngIf="pdfError.historique" style="color:red;font-size:11px;margin-top:5px;">
                   <span>⚠️ {{ pdfError.historique }}</span>
                   <button (click)="telechargerHistorique()"
                     style="border:none;background:transparent;color:#007bff;cursor:pointer;text-decoration:underline;">Réessayer</button>
                 </div>
               </div>
               <button class="icon-btn-dl" (click)="telechargerHistorique()" [disabled]="pdfLoading.historique"
-                style="background: #f1f5f9; border:none; width:45px; height:45px; border-radius: 50%; font-size: 20px; cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                style="background:#f1f5f9;border:none;width:45px;height:45px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
                 <span *ngIf="!pdfLoading.historique">📥</span>
                 <span *ngIf="pdfLoading.historique">⏳</span>
               </button>
             </div>
           </div>
         </ng-container>
+
       </div>
     </main>
   </div>

@@ -1,3 +1,4 @@
+// Importation des outils nécessaires : MVC, base de données, modèles, PDF.
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecouvrementAPI.Data;
@@ -9,118 +10,131 @@ using QuestPDF.Infrastructure;
 
 namespace RecouvrementAPI.Controllers
 {
-    // Contrôleur qui gère tout ce que le CLIENT peut faire
-    // Route de base : http://localhost:5203/api/client
-    [ApiController]
     [Route("api/client")]
     public class ClientController : ControllerBase
     {
-        // _context : accès à la base de données MySQL
         private readonly ApplicationDbContext _context;
-
-        // _env : accès au système de fichiers du serveur (upload)
         private readonly IWebHostEnvironment _env;
 
-        // Constructeur : .NET injecte automatiquement les dépendances
         public ClientController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
             _env = env;
         }
-public class CreateClientDto
-{
-    public string Client     { get; set; }
-    public string Telephone  { get; set; }
-    public string Email      { get; set; }
-    public string Agence     { get; set; }
-    public string TypeCredit { get; set; }
-    public decimal MontantDu { get; set; }
-    public int Retard        { get; set; }
-    public string Statut     { get; set; } = "Amiable";
-}
 
-public class SubmitIntentionDto
-{
-    public int? IdDossier { get; set; }
-    public string TypeIntention { get; set; }
-    public DateTime? DatePaiementPrevue { get; set; }
-    public decimal? MontantPropose { get; set; }
-    public int? ConfianceClient { get; set; }
-    public string Commentaire { get; set; }
-}
-        // ==============================
-        // MÉTHODE PRIVÉE : Vérifier token
-        // Charge le client avec son agence et TOUS ses dossiers.
-        // Retourne null si token introuvable → les endpoints retournent 401.
-        // ==============================
-       
+        public class CreateClientDto
+        {
+            public string Client     { get; set; }
+            public string Telephone  { get; set; }
+            public string Email      { get; set; }
+            public string Agence     { get; set; }
+            public string TypeCredit { get; set; }
+            public decimal MontantDu { get; set; }
+            public int Retard        { get; set; }
+            public string Statut     { get; set; } = "Amiable";
+        }
 
+        public class SubmitIntentionDto
+        {
+            public int? IdDossier { get; set; }
+            public string TypeIntention { get; set; }
+            public DateTime? DatePaiementPrevue { get; set; }
+            public decimal? MontantPropose { get; set; }
+            public int? ConfianceClient { get; set; }
+            public string Commentaire { get; set; }
+        }
+
+        // ==============================
+        // MÉTHODE PRIVÉE : Vérifier le token du client
+        // ==============================
         private async Task<Client> VerifierToken(string token)
         {
-        
-{
-    // ✅ ICI (à l’intérieur)
-    if (!(token.StartsWith("tok_") || token.StartsWith("stb_")))
-    {
-        return null;
-    }
+            if (!(token.StartsWith("tok_") || token.StartsWith("stb_")))
+                return null;
 
             return await _context.Clients
                 .Include(c => c.Agence)
                 .Include(c => c.Dossiers)
-                .FirstOrDefaultAsync(c => c.TokenAcces == token && 
+                .FirstOrDefaultAsync(c => c.TokenAcces == token &&
                                           (c.TokenExpiration == null || c.TokenExpiration > DateTime.Now));
-        }
         }
 
         // ==============================
-        // MÉTHODE PRIVÉE : Résoudre le dossier cible
-        //
-        // Logique de sélection du dossier (comportement par défaut) :
-        //   • Si idDossier est fourni  → cherche ce dossier précis parmi ceux du client
-        //                                (retourne null si non trouvé ou n'appartient pas au client)
-        //   • Si idDossier est null    → prend automatiquement le dossier le plus récent
-        //                                (OrderByDescending sur DateCreation)
-        //
-        // Ce comportement par défaut garantit qu'un client qui ne sélectionne
-        // rien obtient toujours son dossier actif le plus récent.
+        // MÉTHODE PRIVÉE : Trouver le bon dossier pour un client
         // ==============================
         private DossierRecouvrement ResoudreDossier(Client client, int? idDossier)
         {
             if (idDossier.HasValue)
-            {
-                // Recherche du dossier spécifié ET appartenant bien à ce client
-                // (protection contre la manipulation d'ID par un autre client)
                 return client.Dossiers.FirstOrDefault(d => d.IdDossier == idDossier.Value);
-            }
 
-            // Comportement par défaut : dossier le plus récent
             return client.Dossiers
                 .OrderByDescending(d => d.DateCreation)
                 .FirstOrDefault();
         }
 
         // ==============================
-        // MÉTHODE PRIVÉE : Vérifier retard > 3 mois
-        // Déclenche une communication automatique si retard > 90 jours.
-        // Appelée pour chaque dossier dans GetHistorique().
+        // MÉTHODE PRIVÉE : Calculer le nombre de jours de retard
+        //
+        // LOGIQUE CORRIGÉE :
+        //   - On prend la DERNIÈRE échéance impayée dont la date est dépassée
+        //   - Les jours de retard = CURDATE - date de cette dernière échéance
+        //   - Cela reflète le retard "actif" le plus récent, pas l'accumulation
+        //     depuis la toute première échéance manquée
+        //
+        //   Exemple :
+        //     Échéance Jan  → impayée (il y a 300 jours)
+        //     Échéance Fév  → impayée (il y a 270 jours)
+        //     Échéance Mars → impayée (il y a 240 jours)  ← DERNIÈRE
+        //   → joursRetard = 240 jours (et non 300)
         // ==============================
-        private async Task VerifierRetard3Mois(DossierRecouvrement dossier)
+        private int CalculerJoursRetard(DossierRecouvrement dossier)
         {
-            // Cherche la première échéance impayée dépassée
-            var premiereEcheance = dossier.Echeances
-                .Where(e => e.Statut == "impaye" && e.DateEcheance < DateTime.Now)
-                .OrderBy(e => e.DateEcheance)
-                .FirstOrDefault();
+            // Filtre les échéances impayées dont la date est déjà dépassée
+            var echeancesImpayeesDepassees = dossier.Echeances
+                .Where(e => e.Statut == "impaye" && e.DateEcheance < DateTime.Now);
 
-            // Aucune échéance impayée → rien à faire
-            if (premiereEcheance == null) return;
+            if (!echeancesImpayeesDepassees.Any()) return 0;
 
-            int joursRetard = (int)(DateTime.Now - premiereEcheance.DateEcheance).TotalDays;
+            // ✅ CORRECTION : on prend la DERNIÈRE (Max) et non la première (Min)
+            DateTime derniereEcheanceImpayee = echeancesImpayeesDepassees
+                .Max(e => e.DateEcheance);
 
-            if (joursRetard > 90)
+            return (int)(DateTime.Now - derniereEcheanceImpayee).TotalDays;
+        }
+
+        // ==============================
+        // MÉTHODE PRIVÉE : Passer en contentieux si retard > 180 jours
+        //
+        // CORRECTION : seuil 90 jours → 180 jours
+        // ==============================
+        private async Task VerifierRetard180Jours(DossierRecouvrement dossier)
+        {
+            // Utilise la même logique corrigée : DERNIÈRE échéance impayée
+            var echeancesImpayeesDepassees = dossier.Echeances
+                .Where(e => e.Statut == "impaye" && e.DateEcheance < DateTime.Now);
+
+            if (!echeancesImpayeesDepassees.Any()) return;
+
+            DateTime derniereEcheance = echeancesImpayeesDepassees.Max(e => e.DateEcheance);
+            int joursRetard = (int)(DateTime.Now - derniereEcheance).TotalDays;
+
+            // ✅ CORRECTION : seuil 180 jours (au lieu de 90)
+            if (joursRetard > 180)
             {
-                // Anti-doublon : pas de communication si une a déjà été envoyée ce mois
+                if (dossier.StatutDossier != "contentieux" && dossier.StatutDossier != "regularise")
+                {
+                    dossier.StatutDossier = "contentieux";
+
+                    _context.HistoriqueActions.Add(new HistoriqueAction
+                    {
+                        IdDossier    = dossier.IdDossier,
+                        ActionDetail = $"Dossier passé automatiquement en contentieux — retard de {joursRetard} jours (dernière échéance impayée : {derniereEcheance:dd/MM/yyyy}).",
+                        Acteur       = "systeme",
+                        DateAction   = DateTime.Now
+                    });
+                }
+
+                // Anti-doublon : pas de message si déjà envoyé ce mois-ci
                 bool dejaEnvoyee = await _context.Communications
                     .AnyAsync(c =>
                         c.IdDossier == dossier.IdDossier &&
@@ -133,19 +147,20 @@ public class SubmitIntentionDto
                     {
                         IdDossier = dossier.IdDossier,
                         Message = $"Alerte automatique : retard de {joursRetard} jours " +
-                                  $"détecté sur votre dossier. " +
+                                  $"détecté sur votre dossier (depuis le {derniereEcheance:dd/MM/yyyy}). " +
                                   $"Montant impayé : {dossier.MontantImpaye} TND. " +
-                                  $"Veuillez régulariser votre situation.",
-                        Origine = "systeme",
+                                  $"Votre dossier est désormais en phase contentieuse. " +
+                                  $"Veuillez contacter votre agence directement.",
+                        Origine   = "systeme",
                         DateEnvoi = DateTime.Now
                     });
 
                     _context.HistoriqueActions.Add(new HistoriqueAction
                     {
-                        IdDossier = dossier.IdDossier,
-                        ActionDetail = $"Communication auto déclenchée — retard > 3 mois ({joursRetard} jours)",
-                        Acteur = "systeme",
-                        DateAction = DateTime.Now
+                        IdDossier    = dossier.IdDossier,
+                        ActionDetail = $"Communication auto déclenchée — retard > 180 jours ({joursRetard} jours)",
+                        Acteur       = "systeme",
+                        DateAction   = DateTime.Now
                     });
 
                     await _context.SaveChangesAsync();
@@ -154,23 +169,7 @@ public class SubmitIntentionDto
         }
 
         // ==============================
-        // MÉTHODE PRIVÉE : Calculer jours de retard
-        // Factorisée pour éviter la duplication entre GetHistorique() et GenerateRecu().
-        // Retourne 0 si aucune échéance impayée dépassée.
-        // ==============================
-        private int CalculerJoursRetard(DossierRecouvrement dossier)
-        {
-            var echeancesImpayeesDepassees = dossier.Echeances
-                .Where(e => e.Statut == "impaye" && e.DateEcheance < DateTime.Now);
-
-            if (!echeancesImpayeesDepassees.Any()) return 0;
-
-            return (int)(DateTime.Now - echeancesImpayeesDepassees.Min(e => e.DateEcheance)).TotalDays;
-        }
-
-        // ==============================
         // MÉTHODE PRIVÉE : Mapper DossierRecouvrement → DossierDto
-        // Factorisée pour éviter la duplication entre GetHistorique() et tout futur endpoint.
         // ==============================
         private DossierDto MapDossierToDto(DossierRecouvrement dossier)
         {
@@ -187,14 +186,13 @@ public class SubmitIntentionDto
                 StatutDossier  = dossier.StatutDossier,
                 TauxInteret    = dossier.TauxInteret,
 
-                // Intérêts : 0 si retard ≤ 90 jours, calculés sinon
-                MontantInterets = joursRetard > 90
+                // ✅ CORRECTION : intérêts déclenchés à 180 jours (aligné sur le seuil contentieux)
+                MontantInterets = joursRetard > 180
                     ? dossier.MontantImpaye * (dossier.TauxInteret / 100) * (decimal)joursRetard / 365
                     : 0,
 
                 NombreJoursRetard = joursRetard,
 
-                // Prochaine échéance (la plus proche dans le temps)
                 DateEcheance = dossier.Echeances
                     .OrderBy(e => e.DateEcheance)
                     .Select(e => e.DateEcheance)
@@ -220,7 +218,6 @@ public class SubmitIntentionDto
                     DatePaiement = p.DatePaiement
                 }).ToList(),
 
-                // ← CORRECTION : IdRelance ajouté pour que Angular puisse appeler repondre-relance
                 Relances = dossier.Relances.Select(r => new RelanceDto
                 {
                     IdRelance   = r.IdRelance,
@@ -230,7 +227,6 @@ public class SubmitIntentionDto
                     contenu     = r.Contenu,
                 }).ToList(),
 
-                // ← CORRECTION : IdRelance ajouté pour distinguer réponse relance / message libre
                 Communications = dossier.Communications.Select(c => new CommunicationDto
                 {
                     Message   = c.Message,
@@ -240,47 +236,47 @@ public class SubmitIntentionDto
                 }).ToList()
             };
         }
-[HttpPatch("{idDossier}/archiver")]
-public async Task<IActionResult> ArchiverClient(int idDossier)
-{
-    var dossier = await _context.Dossiers
-        .Include(d => d.Client)
-        .FirstOrDefaultAsync(d => d.IdDossier == idDossier);
 
-    if (dossier == null)
-        return NotFound(new { message = "Dossier introuvable." });
+        // ==============================
+        // PATCH api/client/{idDossier}/archiver
+        // ==============================
+        [HttpPatch("{idDossier}/archiver")]
+        public async Task<IActionResult> ArchiverClient(int idDossier)
+        {
+            var dossier = await _context.Dossiers
+                .Include(d => d.Client)
+                .FirstOrDefaultAsync(d => d.IdDossier == idDossier);
 
-    if (dossier.MontantImpaye != 0)
-        return BadRequest(new { message = "Impossible d'archiver : montant impayé non nul." });
+            if (dossier == null)
+                return NotFound(new { message = "Dossier introuvable." });
 
-    dossier.StatutDossier = "regularise";
-    dossier.Client.Statut = "Archivé";
+            if (dossier.MontantImpaye != 0)
+                return BadRequest(new { message = "Impossible d'archiver : montant impayé non nul." });
 
-    _context.HistoriqueActions.Add(new HistoriqueAction
-    {
-        IdDossier = dossier.IdDossier,
-        ActionDetail = "Dossier archivé — montant impayé soldé.",
-        Acteur = "agent",
-        DateAction = DateTime.Now
-    });
+            dossier.StatutDossier  = "regularise";
+            dossier.Client.Statut  = "Archivé";
 
-    await _context.SaveChangesAsync();
-    return Ok(new { message = "Client archivé avec succès." });
-}
+            _context.HistoriqueActions.Add(new HistoriqueAction
+            {
+                IdDossier    = dossier.IdDossier,
+                ActionDetail = "Dossier archivé — montant impayé soldé.",
+                Acteur       = "agent",
+                DateAction   = DateTime.Now
+            });
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Client archivé avec succès." });
+        }
+
         // ==============================
         // GET api/client/historique/{token}
-        //
-        // Retourne TOUS les dossiers du client en JSON.
-        // Appelé par Angular pour afficher la liste des dossiers
-        // et laisser le client en choisir un.
         // ==============================
-       [HttpGet("historique/{token}")]
+        [HttpGet("historique/{token}")]
         public async Task<IActionResult> GetHistorique(string token)
         {
             if (string.IsNullOrEmpty(token))
                 return BadRequest("Token requis");
 
-            // Chargement eager : toutes les relations en une seule requête SQL
             var client = await _context.Clients
                 .Include(c => c.Agence)
                 .Include(c => c.Dossiers)
@@ -293,13 +289,12 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                     .ThenInclude(d => d.Communications)
                 .Include(c => c.Dossiers)
                     .ThenInclude(d => d.Garanties)
-                .FirstOrDefaultAsync(c => c.TokenAcces == token && 
+                .FirstOrDefaultAsync(c => c.TokenAcces == token &&
                                           (c.TokenExpiration == null || c.TokenExpiration > DateTime.Now));
 
             if (client == null)
                 return Unauthorized("Token invalide");
 
-            // Journalisation de l'accès (dossier le plus récent comme référence de log)
             var dossierPrincipal = client.Dossiers
                 .OrderByDescending(d => d.DateCreation)
                 .FirstOrDefault();
@@ -308,29 +303,26 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             {
                 _context.HistoriqueActions.Add(new HistoriqueAction
                 {
-                    IdDossier = dossierPrincipal.IdDossier,
+                    IdDossier    = dossierPrincipal.IdDossier,
                     ActionDetail = $"Accès client via token UUID — IP : {HttpContext.Connection.RemoteIpAddress}",
-                    Acteur = "client",
-                    DateAction = DateTime.Now
+                    Acteur       = "client",
+                    DateAction   = DateTime.Now
                 });
                 await _context.SaveChangesAsync();
             }
 
-            // Vérification du retard > 3 mois pour chaque dossier
+            // ✅ CORRECTION : appelle VerifierRetard180Jours (plus VerifierRetard3Mois)
             foreach (var dossier in client.Dossiers)
             {
-                await VerifierRetard3Mois(dossier);
+                await VerifierRetard180Jours(dossier);
             }
 
-            // Construction du DTO — contient TOUS les dossiers du client
-            // Angular pourra afficher la liste et laisser le client en choisir un
             var dto = new ClientHistoriqueDto
             {
-                NomComplet = client.Nom + " " + client.Prenom,
-                IdAgence   = client.Agence != null ? client.Agence.IdAgence : 0,
+                NomComplet  = client.Nom + " " + client.Prenom,
+                IdAgence    = client.Agence != null ? client.Agence.IdAgence : 0,
                 VilleAgence = client.Agence?.Ville,
 
-                // Tous les dossiers, du plus récent au plus ancien
                 Dossiers = client.Dossiers
                     .OrderByDescending(d => d.DateCreation)
                     .Select(dossier => MapDossierToDto(dossier))
@@ -341,50 +333,35 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
         }
 
         // ==============================
-        // GET api/client/recu/{token}
-        // GET api/client/recu/{token}?idDossier=42   ← dossier spécifique
-        //
-        // Génère et télécharge un PDF du reçu de situation.
-        //   • Sans idDossier → PDF du dossier le plus récent (comportement par défaut)
-        //   • Avec idDossier → PDF du dossier choisi par le client
+        // GET api/client/recu/{token}?idDossier=42
         // ==============================
         [HttpGet("recu/{token}")]
         public async Task<IActionResult> GenerateRecu(string token, [FromQuery] int? idDossier = null)
         {
-            // 1. Sécurité : Vérification de l'identité du client via le Token unique (UUID)
             var client = await VerifierToken(token);
             if (client == null)
                 return Unauthorized("Token invalide");
 
-            // 2. Sélection du dossier : Soit l'ID fourni, soit le dossier le plus récent par défaut
             var dossier = ResoudreDossier(client, idDossier);
             if (dossier == null) return NotFound("Dossier introuvable");
 
-            // 3. Chargement des données : On inclut les échéances pour calculer le retard
             dossier = await _context.Dossiers
                 .Include(d => d.Echeances)
                 .FirstOrDefaultAsync(d => d.IdDossier == dossier.IdDossier);
 
-            // 4. Logique métier : Calcul du nombre de jours de retard cumulés
             int joursRetard = CalculerJoursRetard(dossier);
-
-            // --- CALCUL DU MONTANT PAYÉ ---
-            // Différence entre ce qui était prévu au départ et ce qui reste à payer
             decimal montantPaye = dossier.MontantInitial - dossier.MontantImpaye;
 
-            // 5. Calcul des intérêts de retard (Règle des 90 jours)
-            decimal montantInterets = joursRetard > 90
+            // ✅ CORRECTION : intérêts à 180 jours
+            decimal montantInterets = joursRetard > 180
                 ? dossier.MontantImpaye * (dossier.TauxInteret / 100) * ((decimal)joursRetard / 365)
                 : 0;
 
-            // 6. Calcul du Total (Principal restant + Intérêts)
             decimal totalARegler = dossier.MontantImpaye + montantInterets;
 
-            // 7. Identité visuelle selon le statut
             string colorHex = dossier.StatutDossier == "regularise" ? Colors.Green.Medium :
                              (dossier.StatutDossier == "contentieux" ? Colors.Red.Medium : Colors.Blue.Medium);
 
-            // 8. Génération du document PDF
             var document = Document.Create(container =>
             {
                 container.Page(page =>
@@ -393,7 +370,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                     page.Size(PageSizes.A4);
                     page.DefaultTextStyle(x => x.FontSize(11));
 
-                    // EN-TÊTE CORRIGÉ : Affichage STB BANK + Ville
                     page.Header().Row(row =>
                     {
                         row.RelativeItem().Column(col =>
@@ -401,27 +377,37 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                             col.Item().Text("REÇU DE SITUATION").FontSize(22).SemiBold().FontColor(Colors.Blue.Medium);
                             col.Item().Text($"Dossier n° {dossier.IdDossier}").FontSize(10);
                         });
-
-                        // Ici on force "STB BANK" suivi de la ville de l'agence
                         row.RelativeItem().AlignRight().Text($"STB BANK - {client.Agence?.Ville}").Bold();
                     });
 
                     page.Content().PaddingVertical(25).Column(col =>
                     {
                         col.Spacing(10);
+
                         col.Item().Text($"Client : {client.Nom} {client.Prenom}").Bold();
 
                         col.Item().Text(text => {
                             text.Span("Retard constaté : ").Bold();
-                            text.Span($"{joursRetard} jours").FontColor(joursRetard > 0 ? Colors.Red.Medium : Colors.Green.Medium).Bold();
+                            text.Span($"{joursRetard} jours")
+                                .FontColor(joursRetard > 0 ? Colors.Red.Medium : Colors.Green.Medium).Bold();
                         });
+
+                        // ✅ Mention contentieux si > 180 jours
+                        if (joursRetard > 180)
+                        {
+                            col.Item().Text(text => {
+                                text.Span("⚠ Dossier en phase contentieuse. ")
+                                    .FontColor(Colors.Red.Medium).Bold();
+                                text.Span("Veuillez contacter votre agence directement.")
+                                    .FontColor(Colors.Red.Medium);
+                            });
+                        }
 
                         col.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
 
                         col.Item().Text($"Type de crédit : {dossier.TypeEmprunt}");
                         col.Item().Text($"Montant initial : {dossier.MontantInitial:F3} TND");
 
-                        // --- AFFICHAGE DU MONTANT DÉJÀ PAYÉ ---
                         col.Item().Text(text => {
                             text.Span("Montant déjà payé : ");
                             text.Span($"{montantPaye:F3} TND").FontColor(Colors.Green.Medium).SemiBold();
@@ -439,10 +425,9 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
                         col.Item().Text($"Frais de dossier : {dossier.FraisDossier:F3} TND");
 
-                        // BLOC RÉCAPITULATIF FINAL
                         col.Item().PaddingTop(15).Background(Colors.Grey.Lighten4).Padding(15).Column(inner =>
                         {
-                            inner.Item().Text("Montant à apyer").FontSize(11).Bold();
+                            inner.Item().Text("Montant à payer").FontSize(11).Bold();
                             inner.Item().Text($"{totalARegler:F3} TND")
                                 .FontSize(28).Bold().FontColor(colorHex);
                         });
@@ -455,13 +440,9 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             byte[] pdfBytes = document.GeneratePdf();
             return File(pdfBytes, "application/pdf", $"Recu_STB_Dossier_{dossier.IdDossier}.pdf");
         }
-        // Nom du fichier inclut l'idDossier pour distinguer les reçus d'un même client
 
         // ==============================
         // POST api/client/upload/{token}
-        // POST api/client/upload/{token}?idDossier=42   ← dossier spécifique
-        //
-
         // ==============================
         [HttpPost("upload/{token}")]
         public async Task<IActionResult> UploadJustificatif(
@@ -476,7 +457,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             if (File == null || File.Length == 0)
                 return BadRequest("Aucun fichier envoyé");
 
-            // Whitelist d'extensions autorisées (insensible à la casse)
             var extensionsAutorisees = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
             var extension = Path.GetExtension(File.FileName).ToLower();
             if (!extensionsAutorisees.Contains(extension))
@@ -485,20 +465,17 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             if (File.Length > 5 * 1024 * 1024)
                 return BadRequest("Fichier trop volumineux. Maximum 5 MB.");
 
-            // Résolution du dossier cible (défaut = le plus récent)
             var dossier = ResoudreDossier(client, idDossier);
             if (dossier == null)
                 return NotFound(idDossier.HasValue
                     ? $"Dossier {idDossier} introuvable ou n'appartient pas à ce client."
                     : "Aucun dossier trouvé.");
 
-            // Stockage dans un sous-dossier propre à chaque dossier de recouvrement
             var uploadsPath = Path.Combine(
                 _env.ContentRootPath, "uploads", dossier.IdDossier.ToString());
             Directory.CreateDirectory(uploadsPath);
 
-            // Nom unique : horodatage + nom client → évite toute collision de fichier
-            var nomFichier = $"{DateTime.Now:yyyyMMddHHmmss}_{client.Nom}{extension}";
+            var nomFichier    = $"{DateTime.Now:yyyyMMddHHmmss}_{client.Nom}{extension}";
             var cheminComplet = Path.Combine(uploadsPath, nomFichier);
 
             using (var stream = new FileStream(cheminComplet, FileMode.Create))
@@ -514,7 +491,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                 DateAction   = DateTime.Now
             });
 
-            // Communication automatique vers l'agent pour l'informer du nouveau justificatif
             _context.Communications.Add(new Communication
             {
                 IdDossier = dossier.IdDossier,
@@ -527,20 +503,14 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
             return Ok(new
             {
-                message = "Fichier uploadé avec succès",
-                nomFichier = nomFichier,
-                // Retourne l'idDossier effectivement utilisé pour qu'Angular
-                // sache à quel dossier l'upload a été rattaché (utile si idDossier était null)
+                message          = "Fichier uploadé avec succès",
+                nomFichier       = nomFichier,
                 idDossierUtilise = dossier.IdDossier
             });
         }
 
         // ==============================
         // POST api/client/message/{token}
-        // POST api/client/message/{token}?idDossier=42
-        //
-        // Client envoie un message libre à son agence.
-        // IdRelance = NULL → pas lié à une relance.
         // ==============================
         [HttpPost("message/{token}")]
         public async Task<IActionResult> EnvoyerMessage(
@@ -565,7 +535,7 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             _context.Communications.Add(new Communication
             {
                 IdDossier = dossier.IdDossier,
-                IdRelance = null,                 // ← message libre
+                IdRelance = null,
                 Message   = messageDto.Contenu.Trim(),
                 Origine   = "client",
                 DateEnvoi = DateTime.Now
@@ -590,7 +560,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
         // ==============================
         // POST api/client/repondre-relance/{token}/{idRelance}
-        
         // ==============================
         [HttpPost("repondre-relance/{token}/{idRelance}")]
         public async Task<IActionResult> RepondreRelance(
@@ -609,7 +578,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             if (client == null)
                 return Unauthorized("Token invalide");
 
-            // Sécurité anti-IDOR : la relance doit appartenir à un dossier du client
             var dossier = client.Dossiers
                 .FirstOrDefault(d => d.Relances.Any(r => r.IdRelance == idRelance));
 
@@ -617,15 +585,12 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                 return NotFound("Relance introuvable ou n'appartient pas à ce client.");
 
             var relance = dossier.Relances.First(r => r.IdRelance == idRelance);
-
-            // Mise à jour du statut
             relance.Statut = "repondu";
 
-            // Communication avec lien FK explicite vers la relance
             _context.Communications.Add(new Communication
             {
                 IdDossier = dossier.IdDossier,
-                IdRelance = idRelance,            // ← lien explicite relance ↔ communication
+                IdRelance = idRelance,
                 Message   = reponseDto.Contenu.Trim(),
                 Origine   = "client",
                 DateEnvoi = DateTime.Now
@@ -652,9 +617,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
         // ==============================
         // POST api/client/intention/{token}
-        //
-        // Client soumet son intention (promesse, paiement, réclamation).
-        // Déclenche un accusé de réception automatique.
         // ==============================
         [HttpPost("intention/{token}")]
         public async Task<IActionResult> PostIntention(string token, [FromBody] SubmitIntentionDto dto)
@@ -670,65 +632,58 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
             if (dossier == null)
                 return NotFound("Dossier introuvable");
 
-            // 1. Création de l'intention sécurisée
             var intention = new IntentionClient
             {
-                IdDossier = dossier.IdDossier,
-                TypeIntention = dto.TypeIntention,
-                DateIntention = DateTime.Now,
+                IdDossier          = dossier.IdDossier,
+                TypeIntention      = dto.TypeIntention,
+                DateIntention      = DateTime.Now,
                 DatePaiementPrevue = dto.DatePaiementPrevue,
-                MontantPropose = dto.MontantPropose,
-                ConfianceClient = dto.ConfianceClient,
-                Statut = "En attente"
+                MontantPropose     = dto.MontantPropose,
+                ConfianceClient    = dto.ConfianceClient,
+                Statut             = "En attente"
             };
 
             _context.Intentions.Add(intention);
 
-            // 2. Enregistrement du commentaire dans les communications
             if (!string.IsNullOrWhiteSpace(dto.Commentaire))
             {
                 _context.Communications.Add(new Communication
                 {
                     IdDossier = dossier.IdDossier,
-                    Message = dto.Commentaire.Trim(),
-                    Origine = "client",
+                    Message   = dto.Commentaire.Trim(),
+                    Origine   = "client",
                     DateEnvoi = DateTime.Now
                 });
             }
 
-            // 3. ACCUSÉ DE RÉCEPTION SYSTÈME (Communication auto)
             _context.Communications.Add(new Communication
             {
                 IdDossier = dossier.IdDossier,
-                Message = $"[ACCUSÉ DE RÉCEPTION] Nous avons bien enregistré votre '{dto.TypeIntention.Replace("_", " ")}'. Votre demande est en cours de traitement par votre agence.",
-                Origine = "systeme",
-                DateEnvoi = DateTime.Now.AddSeconds(1) // Juste après pour l'ordre d'affichage
+                Message   = $"[ACCUSÉ DE RÉCEPTION] Nous avons bien enregistré votre '{dto.TypeIntention.Replace("_", " ")}'. Votre demande est en cours de traitement par votre agence.",
+                Origine   = "systeme",
+                DateEnvoi = DateTime.Now.AddSeconds(1)
             });
 
-            // 4. Historisation
             _context.HistoriqueActions.Add(new HistoriqueAction
             {
-                IdDossier = dossier.IdDossier,
+                IdDossier    = dossier.IdDossier,
                 ActionDetail = $"Soumission d'intention : {dto.TypeIntention}",
-                Acteur = "client",
-                DateAction = DateTime.Now
+                Acteur       = "client",
+                DateAction   = DateTime.Now
             });
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Intention enregistrée avec succès",
+                message     = "Intention enregistrée avec succès",
                 idIntention = intention.IdIntention,
-                idDossier = dossier.IdDossier
+                idDossier   = dossier.IdDossier
             });
         }
 
         // ==============================
         // GET api/client/accuse-reception/{token}/{idIntention}
-        //
-        // Génère un PDF officiel d'accusé de réception pour le client.
-        // = [LIVRABLE PFE] =
         // ==============================
         [HttpGet("accuse-reception/{token}/{idIntention}")]
         public async Task<IActionResult> GenerateAccuseReception(string token, int idIntention)
@@ -757,7 +712,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                     page.Size(PageSizes.A4);
                     page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
 
-                    // Header avec branding STB
                     page.Header().Row(row =>
                     {
                         row.RelativeItem().Column(col =>
@@ -768,7 +722,7 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                         });
 
                         row.ConstantItem(100).AlignRight().Column(col => {
-                            col.Item().Height(40).Background(Colors.Blue.Medium); // Placeholder pour logo
+                            col.Item().Height(40).Background(Colors.Blue.Medium);
                             col.Item().AlignCenter().Text("STB BANK").FontSize(8);
                         });
                     });
@@ -777,7 +731,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                     {
                         col.Spacing(15);
 
-                        // Bloc Identité
                         col.Item().Row(row => {
                             row.RelativeItem().Column(c => {
                                 c.Item().Text("Détails Client").Bold().Underline();
@@ -792,7 +745,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
                         col.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
 
-                        // Corps de l'accusé
                         col.Item().PaddingTop(10).Text(text => {
                             text.Span("Objet : ").Bold();
                             text.Span($"Confirmation de réception d'intention de {intention.TypeIntention.Replace("_", " ")}.");
@@ -800,15 +752,14 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
                         col.Item().Text($"Nous confirmons avoir reçu votre déclaration le {intention.DateIntention:dd/MM/yyyy} à {intention.DateIntention:HH:mm} concernant votre dossier de crédit n°{dossier.IdDossier}.");
 
-                        // Détails de la soumission
                         col.Item().Background(Colors.Grey.Lighten4).Padding(15).Column(inner => {
                             inner.Spacing(5);
                             inner.Item().Text("Récapitulatif de votre déclaration :").Bold().FontSize(12);
                             inner.Item().Text($"• Type d'action : {intention.TypeIntention}");
-                            
+
                             if (intention.DatePaiementPrevue.HasValue)
                                 inner.Item().Text($"• Date de règlement prévue : {intention.DatePaiementPrevue.Value:dd/MM/yyyy}");
-                            
+
                             if (intention.MontantPropose.HasValue)
                                 inner.Item().Text($"• Montant proposé : {intention.MontantPropose.Value:F3} TND");
 
@@ -821,7 +772,7 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                         col.Item().PaddingTop(40).AlignRight().Column(sig => {
                             sig.Item().Text("Généré numériquement par le").FontSize(9);
                             sig.Item().Text("Moteur de Recouvrement STB").FontSize(9).Bold();
-                            sig.Item().PaddingTop(10).AlignCenter().Width(80).Height(80).Background(Colors.Grey.Lighten3); // Simulation QR Code
+                            sig.Item().PaddingTop(10).AlignCenter().Width(80).Height(80).Background(Colors.Grey.Lighten3);
                             sig.Item().AlignCenter().Text("Certifié conforme").FontSize(7).Italic();
                         });
                     });
@@ -859,7 +810,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                 return Unauthorized("Token invalide");
 
             var dossier = client.Dossiers.FirstOrDefault(d => d.IdDossier == idDossier);
-
             if (dossier == null)
                 return NotFound("Dossier introuvable");
 
@@ -895,7 +845,8 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
                             inner.Item().Text("INFORMATIONS DU DOSSIER").Bold().FontSize(12);
                             inner.Item().Text($"Montant initial : {dossier.MontantInitial} TND");
                             inner.Item().Text($"Montant impayé : {dossier.MontantImpaye} TND");
-                            inner.Item().Text($"Jours de retard : {joursRetard}");
+                            // ✅ Affiche les jours de retard avec la logique corrigée
+                            inner.Item().Text($"Jours de retard : {joursRetard} (depuis la dernière échéance impayée)");
                             inner.Item().Text($"Statut : {dossier.StatutDossier.ToUpper()}");
                             inner.Item().Text($"Type : {dossier.TypeEmprunt}");
                         });
@@ -948,7 +899,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
         // ==============================
         // GET api/client/intention-existante/{token}/{idDossier}
-        // Vérifie si une intention "En attente" existe déjà pour ce dossier
         // ==============================
         [HttpGet("intention-existante/{token}/{idDossier}")]
         public async Task<IActionResult> GetIntentionExistante(string token, int idDossier)
@@ -969,8 +919,8 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
             return Ok(new
             {
-                existe = true,
-                idIntention = intention.IdIntention,
+                existe        = true,
+                idIntention   = intention.IdIntention,
                 typeIntention = intention.TypeIntention,
                 dateIntention = intention.DateIntention
             });
@@ -978,7 +928,6 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
         // ==============================
         // DELETE api/client/intention/{token}/{idIntention}
-        // Annule une intention "En attente" du client
         // ==============================
         [HttpDelete("intention/{token}/{idIntention}")]
         public async Task<IActionResult> AnnulerIntention(string token, int idIntention)
@@ -1002,10 +951,10 @@ public async Task<IActionResult> ArchiverClient(int idDossier)
 
             _context.HistoriqueActions.Add(new HistoriqueAction
             {
-                IdDossier = intention.IdDossier,
+                IdDossier    = intention.IdDossier,
                 ActionDetail = $"Client a annulé son intention #{idIntention} de type '{intention.TypeIntention}'",
-                Acteur = "client",
-                DateAction = DateTime.Now
+                Acteur       = "client",
+                DateAction   = DateTime.Now
             });
 
             await _context.SaveChangesAsync();

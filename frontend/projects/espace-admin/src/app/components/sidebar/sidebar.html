@@ -2,11 +2,9 @@
   <div class="sb-header">
     <div class="logo-stack">
       <div class="logo-text-inline">
-      
         <img src="assets/OIP-removebg-preview.png" alt="Icon" class="logo-symbol-xl">
       </div>
       <div class="logo-divider"></div>
-     
     </div>
   </div>
 
@@ -30,26 +28,26 @@
     <div class="sb-item sub" [class.active]="isActive('relances')" routerLink="/relances">
       <span class="sb-icon">📢</span>
       <span class="sb-text">Relances</span>
-      <span class="notif-badge secondary" *ngIf="notifService.counts().relances > 0">{{ notifService.counts().relances
-        }}</span>
+      <span class="notif-badge secondary" *ngIf="notifService.counts().relances > 0">{{ notifService.counts().relances }}</span>
     </div>
     <div class="sb-item sub" [class.active]="isActive('intentions')" routerLink="/intentions">
       <span class="sb-icon">📝</span>
       <span class="sb-text">Réponse d'intention</span>
-      <span class="notif-badge" *ngIf="notifService.counts().intentions > 0">{{ notifService.counts().intentions
-        }}</span>
+      <span class="notif-badge" *ngIf="notifService.counts().intentions > 0">{{ notifService.counts().intentions }}</span>
     </div>
     <div class="sb-item sub" [class.active]="isActive('scoring')" routerLink="/scoring">
       <span class="sb-icon">🤖</span>
       <span class="sb-text">Scoring IA</span>
     </div>
 
-    <div class="sb-section">Admin</div>
-    <div class="sb-item" [class.active]="isActive('users')" routerLink="/users">
+    <!-- ✅ Section Admin — visible uniquement pour les Admins -->
+    <div class="sb-section" *ngIf="currentUser?.role === 'Admin'">Admin</div>
+    <div class="sb-item" *ngIf="currentUser?.role === 'Admin'"
+         [class.active]="isActive('users')" routerLink="/users">
       <span class="sb-icon">⚙️</span>
       <span class="sb-text">Utilisateurs</span>
     </div>
-  </div>
+  </div>  <!-- ✅ fermeture sb-menu manquante -->
 
   <div class="sb-footer">
     <div class="theme-toggle" (click)="toggleTheme()"

@@ -76,6 +76,20 @@ export class ImpayesComponent implements OnInit  {
   }
 
   exporterPDF() {
-    this.toastService.show("Génération du document PDF en cours...", "info");
-  }
+  this.toastService.show("Génération du document PDF en cours...", "info");
+  this.apiService.exportImpayesPdf().subscribe({
+    next: (blob: Blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `STB_Impayes_${new Date().getFullYear()}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      this.toastService.show("✅ PDF exporté avec succès !", "success");
+    },
+    error: () => {
+      this.toastService.show("❌ Erreur lors de la génération du PDF.", "error");
+    }
+  });
+}
 }

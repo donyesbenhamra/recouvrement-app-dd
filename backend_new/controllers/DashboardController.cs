@@ -28,7 +28,7 @@ namespace RecouvrementAPI.Controllers
 
         /// <summary>
         /// Récupère les 4 KPIs principaux en haut du Dashboard.
-        /// Route API : GET http://localhost:5203/api/Dashboard/kpi
+        /// Route API : GET http://localhost:5000/api/Dashboard/kpi
         /// </summary>
         /// <returns>Objet JSON contenant les statistiques : Dossiers actifs, Montant impayé, Taux réponse, Intentions</returns>
         [HttpGet("kpi")]

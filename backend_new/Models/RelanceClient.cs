@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RecouvrementAPI.Models
 {
-    // Table relance_client
     [Table("relance_client")]
     public class RelanceClient
     {
@@ -14,17 +13,15 @@ namespace RecouvrementAPI.Models
         [Column("id_dossier")]
         public int IdDossier { get; set; }
 
-        // email / sms / appel
         [Column("moyen")]
-        public string Moyen { get; set; }
+        public string Moyen { get; set; } = string.Empty;
 
-        // envoye / repondu / sans_reponse
         [Column("statut")]
-        public string Statut { get; set; }
+        public string Statut { get; set; } = string.Empty;
 
         [Column("date_relance")]
         public DateTime DateRelance { get; set; }
-        // Contenu de la relance 
+
         [Column("contenu")]
         public string Contenu { get; set; }
 

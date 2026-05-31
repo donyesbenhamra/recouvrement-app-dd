@@ -83,4 +83,9 @@ updateClient(idDossier: number, data: { telephone: string, statut: string }): Ob
 envoyerMessageRelance(idDossier: number, message: string): Observable<any> {
   return this.http.post<any>(`${this.baseUrl}/Relance/${idDossier}/message`, { message });
 }
+exportImpayesPdf(): Observable<Blob> {
+  return this.http.get(`${this.baseUrl}/Impaye/export-pdf`, {
+    responseType: 'blob'  // ← obligatoire pour recevoir un fichier binaire
+  });
+}
 }

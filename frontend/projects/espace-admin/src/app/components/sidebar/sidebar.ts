@@ -15,7 +15,7 @@ import { NotificationService } from '../../services/notification.service';
 })
 export class Sidebar {
   constructor(
-    private router: Router, 
+    private router: Router,
     private toastService: ToastService,
     private authService: AuthService,
     public themeService: ThemeService,
@@ -26,7 +26,6 @@ export class Sidebar {
     this.themeService.toggleTheme();
   }
 
-  // Utilisation d'un getter pour accéder au signal réactif
   get currentUser() {
     return this.authService.currentUser();
   }

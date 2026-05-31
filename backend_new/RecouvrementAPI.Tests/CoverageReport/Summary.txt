@@ -1,0 +1,106 @@
+Summary
+  Generated on: 24/05/2026 - 03:10:44
+  Coverage date: 24/05/2026 - 03:09:51
+  Parser: Cobertura
+  Assemblies: 1
+  Classes: 84
+  Files: 54
+  Line coverage: 14.4%
+  Covered lines: 650
+  Uncovered lines: 3833
+  Coverable lines: 4483
+  Total lines: 6806
+  Branch coverage: 16.4% (91 of 552)
+  Covered branches: 91
+  Total branches: 552
+  Method coverage: 29.8% (169 of 567)
+  Full method coverage: 27.8% (158 of 567)
+  Covered methods: 169
+  Fully covered methods: 158
+  Total methods: 567
+
+RecouvrementAPI                                                  14.4%
+  Program                                                           0%
+  RecouvrementAPI.Controllers.AdminClientController                 0%
+  RecouvrementAPI.Controllers.AuthController                     86.9%
+  RecouvrementAPI.Controllers.ClientController                   36.8%
+  RecouvrementAPI.Controllers.ClientListController                  0%
+  RecouvrementAPI.Controllers.DashboardController                   0%
+  RecouvrementAPI.Controllers.EmailService                          0%
+  RecouvrementAPI.Controllers.FicheClientController                 0%
+  RecouvrementAPI.Controllers.ImpayeController                      0%
+  RecouvrementAPI.Controllers.IntentionAdminController              0%
+  RecouvrementAPI.Controllers.IntentionController                   0%
+  RecouvrementAPI.Controllers.RelanceController                  89.4%
+  RecouvrementAPI.Controllers.ScoringController                     0%
+  RecouvrementAPI.Controllers.UtilisateurController                 0%
+  RecouvrementAPI.Data.ApplicationDbContext                       100%
+  RecouvrementAPI.DTOs.ClientFormDto                                0%
+  RecouvrementAPI.DTOs.ClientHistoriqueDto                        100%
+  RecouvrementAPI.DTOs.ClientListItemDto                            0%
+  RecouvrementAPI.DTOs.ClientListKpiDto                             0%
+  RecouvrementAPI.DTOs.ClientListResponseDto                        0%
+  RecouvrementAPI.DTOs.CommunicationDto                             0%
+  RecouvrementAPI.DTOs.CreateClientDto                              0%
+  RecouvrementAPI.DTOs.CreateClientsDto                             0%
+  RecouvrementAPI.DTOs.CreateDossierDto                             0%
+  RecouvrementAPI.DTOs.CreateUtilisateurDto                         0%
+  RecouvrementAPI.DTOs.DashboardChartsDto                           0%
+  RecouvrementAPI.DTOs.DashboardKpiDto                              0%
+  RecouvrementAPI.DTOs.DossierDto                                94.1%
+  RecouvrementAPI.DTOs.DossierRiskDto                               0%
+  RecouvrementAPI.DTOs.EcheanceDto                                  0%
+  RecouvrementAPI.DTOs.EnvoiTokenDto                              100%
+  RecouvrementAPI.DTOs.EnvoiTokenResponseDto                      100%
+  RecouvrementAPI.DTOs.EnvoyerMessageDto                          100%
+  RecouvrementAPI.DTOs.EvolutionMensuelleDto                        0%
+  RecouvrementAPI.DTOs.FicheClientInfoDto                           0%
+  RecouvrementAPI.DTOs.FicheClientResponseDto                       0%
+  RecouvrementAPI.DTOs.FicheDossierDto                              0%
+  RecouvrementAPI.DTOs.FicheHistoriqueDto                           0%
+  RecouvrementAPI.DTOs.FicheIntentionDto                            0%
+  RecouvrementAPI.DTOs.FicheTokenStateDto                           0%
+  RecouvrementAPI.DTOs.GarantieDto                                  0%
+  RecouvrementAPI.DTOs.HistoriquePaiementDto                        0%
+  RecouvrementAPI.DTOs.ImpayeItemDto                                0%
+  RecouvrementAPI.DTOs.ImpayeKpiDto                                 0%
+  RecouvrementAPI.DTOs.ImpayeResponseDto                            0%
+  RecouvrementAPI.DTOs.IntentionDashboardResponseDto                0%
+  RecouvrementAPI.DTOs.IntentionDecisionDto                         0%
+  RecouvrementAPI.DTOs.IntentionItemDto                             0%
+  RecouvrementAPI.DTOs.IntentionKpiDto                              0%
+  RecouvrementAPI.DTOs.LoginRequestDto                            100%
+  RecouvrementAPI.DTOs.LoginResponseDto                          83.3%
+  RecouvrementAPI.DTOs.PriorityDossierDto                           0%
+  RecouvrementAPI.DTOs.RelanceCanalStatDto                        100%
+  RecouvrementAPI.DTOs.RelanceDashboardResponseDto                100%
+  RecouvrementAPI.DTOs.RelanceDto                                   0%
+  RecouvrementAPI.DTOs.RelanceItemDto                            90.9%
+  RecouvrementAPI.DTOs.RelanceKpiDto                              100%
+  RecouvrementAPI.DTOs.RiskScoreResult                              0%
+  RecouvrementAPI.DTOs.ScoringAiRecommendationDto                   0%
+  RecouvrementAPI.DTOs.ScoringDashboardResponseDto                  0%
+  RecouvrementAPI.DTOs.ScoringDetailsDto                            0%
+  RecouvrementAPI.DTOs.ScoringItemDto                               0%
+  RecouvrementAPI.DTOs.ScoringKpiDto                                0%
+  RecouvrementAPI.DTOs.StatutDossierStatDto                         0%
+  RecouvrementAPI.DTOs.SubmitIntentionDto                           0%
+  RecouvrementAPI.DTOs.UpdateClientDto                              0%
+  RecouvrementAPI.DTOs.UpdateUtilisateurDto                         0%
+  RecouvrementAPI.DTOs.UtilisateurItemDto                           0%
+  RecouvrementAPI.DTOs.UtilisateurListResponseDto                   0%
+  RecouvrementAPI.Helpers.RecouvrementHelper                        0%
+  RecouvrementAPI.Migrations.AddRecommandationToScoreRisque         0%
+  RecouvrementAPI.Migrations.ApplicationDbContextModelSnapshot      0%
+  RecouvrementAPI.Models.Agence                                  66.6%
+  RecouvrementAPI.Models.Client                                  92.3%
+  RecouvrementAPI.Models.Communication                             75%
+  RecouvrementAPI.Models.DossierRecouvrement                     89.4%
+  RecouvrementAPI.Models.Echeance                                   0%
+  RecouvrementAPI.Models.Garantie                                   0%
+  RecouvrementAPI.Models.HistoriqueAction                        83.3%
+  RecouvrementAPI.Models.HistoriquePaiement                         0%
+  RecouvrementAPI.Models.IntentionClient                           80%
+  RecouvrementAPI.Models.RelanceClient                            100%
+  RecouvrementAPI.Models.ScoreRisque                                0%
+  RecouvrementAPI.Models.UtilisateurBack                         81.8%

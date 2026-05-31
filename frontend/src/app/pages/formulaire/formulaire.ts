@@ -39,7 +39,7 @@ export class FormulaireComponent implements OnInit {
   relanceSending: boolean = false;
   relanceReponsesEnvoyees: number[] = [];
 
-  // ── PDF ──────────────────────────────────────────────
+  // PDF
   pdfLoading: { recu: boolean; historique: boolean } = { recu: false, historique: false };
   pdfError: { recu: string | null; historique: string | null } = { recu: null, historique: null };
 
@@ -50,7 +50,8 @@ export class FormulaireComponent implements OnInit {
     { value: 'demande_echeance',      label: "Demande d'échéancier" },
     { value: 'demande_consolidation', label: 'Demande de consolidation' },
   ];
-confirmationBlock: NewType | null | undefined;
+
+  confirmationBlock: NewType | null | undefined;
 
   constructor(
     private route: ActivatedRoute,
@@ -62,152 +63,162 @@ confirmationBlock: NewType | null | undefined;
     private cdr: ChangeDetectorRef
   ) {}
 
+  // ============================================================
+  // ✅ GETTER CORRIGÉ : contentieux si jours de retard > 180
+  // NombreJoursRetard vient du backend qui calcule depuis la
+  // DERNIÈRE échéance impayée dépassée (logique corrigée)
+  // ============================================================
+  get estContentieux(): boolean {
+    return (this.dossier?.nombreJoursRetard ?? 0) > 180;
+  }
+
   ngOnInit(): void {
-  this.token = this.route.snapshot.paramMap.get('token')!;
-  this.idDossier = Number(this.route.snapshot.paramMap.get('idDossier'));
-this.tokenService.clearClientData();
-  this.form = this.fb.group({
-    typeIntention:      ['', Validators.required],
-    datePaiementPrevue: [null],
-    montantPropose:     [null],
-    commentaire:        ['', Validators.maxLength(500)],
-    email:              ['', Validators.email]  // optionnel, validation email
-  });
+    this.token = this.route.snapshot.paramMap.get('token')!;
+    this.idDossier = Number(this.route.snapshot.paramMap.get('idDossier'));
+    this.tokenService.clearClientData();
 
-  this.messageForm = this.fb.group({
-    message: ['', [Validators.required, Validators.maxLength(500)]]
-  });
+    this.form = this.fb.group({
+      typeIntention:      ['', Validators.required],
+      datePaiementPrevue: [null],
+      montantPropose:     [null],
+      commentaire:        ['', Validators.maxLength(500)],
+      email:              ['', Validators.email]
+    });
 
-  const cachedData = this.tokenService.getClientDataFromSession();
-  if (cachedData) {
-    this.clientData = cachedData;
-    this.dossier = cachedData.dossiers.find(d => Number(d.idDossier) === Number(this.idDossier)) || null;
-    if (!this.dossier) { this.router.navigate(['/token-invalide']); return; }
-    this.dataLoading = false;
-    this.verifierDoublon();
-  } else {
-    this.tokenService.getClientData(this.token).subscribe({
-      next: data => {
-        this.clientData = data;
-        this.tokenService.saveClientData(data);
-        this.dossier = data.dossiers.find(d => Number(d.idDossier) === Number(this.idDossier)) || null;
-        if (!this.dossier) { this.router.navigate(['/token-invalide']); return; }
-        this.dataLoading = false;
-        this.verifierDoublon();
+    this.messageForm = this.fb.group({
+      message: ['', [Validators.required, Validators.maxLength(500)]]
+    });
+
+    const cachedData = this.tokenService.getClientDataFromSession();
+    if (cachedData) {
+      this.clientData = cachedData;
+      this.dossier = cachedData.dossiers.find(d => Number(d.idDossier) === Number(this.idDossier)) || null;
+      if (!this.dossier) { this.router.navigate(['/token-invalide']); return; }
+      this.dataLoading = false;
+      this.verifierDoublon();
+    } else {
+      this.tokenService.getClientData(this.token).subscribe({
+        next: data => {
+          this.clientData = data;
+          this.tokenService.saveClientData(data);
+          this.dossier = data.dossiers.find(d => Number(d.idDossier) === Number(this.idDossier)) || null;
+          if (!this.dossier) { this.router.navigate(['/token-invalide']); return; }
+          this.dataLoading = false;
+          this.verifierDoublon();
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.dataLoading = false;
+          this.router.navigate(['/token-invalide']);
+        }
+      });
+    }
+
+    this.form.get('typeIntention')?.valueChanges.subscribe(val => {
+      const dateCtrl   = this.form.get('datePaiementPrevue');
+      const montantCtrl = this.form.get('montantPropose');
+      dateCtrl?.clearValidators();
+      montantCtrl?.clearValidators();
+      if (val === 'demande_echeance' || val === 'promesse_paiement') {
+        dateCtrl?.setValidators([Validators.required]);
+      }
+      if (val === 'paiement_partiel') {
+        montantCtrl?.setValidators([Validators.required]);
+      }
+      dateCtrl?.updateValueAndValidity();
+      montantCtrl?.updateValueAndValidity();
+    });
+
+    this.form.get('email')?.valueChanges.subscribe(val => {
+      this.emailInvalide = !!val && this.form.get('email')?.invalid === true;
+    });
+  }
+
+  private verifierDoublon(): void {
+    this.recouvrementService.verifierIntentionExistante(this.token, this.idDossier).subscribe({
+      next: (res) => {
+        if (res.existe) {
+          this.intentionExistante = res;
+          this.afficherAvertissementDoublon = true;
+        }
+      },
+      error: (err) => { console.error('verifierDoublon error:', err); }
+    });
+  }
+
+  annulerIntentionExistante(): void {
+    if (!this.intentionExistante?.idIntention) return;
+    this.intentionLoading = true;
+    this.recouvrementService.annulerIntention(this.token, this.intentionExistante.idIntention).subscribe({
+      next: () => {
+        this.intentionLoading = false;
+        this.intentionExistante = null;
+        this.afficherAvertissementDoublon = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.dataLoading = false;
-        this.router.navigate(['/token-invalide']);
+      error: (err) => {
+        console.error('Erreur annulation:', err);
+        this.intentionLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
 
-  this.form.get('typeIntention')?.valueChanges.subscribe(val => {
-    const dateCtrl = this.form.get('datePaiementPrevue');
-    const montantCtrl = this.form.get('montantPropose');
-    dateCtrl?.clearValidators();
-    montantCtrl?.clearValidators();
-    if (val === 'demande_echeance' || val === 'promesse_paiement') {
-      dateCtrl?.setValidators([Validators.required]);
-    }
-    if (val === 'paiement_partiel') {
-      montantCtrl?.setValidators([Validators.required]);
-    }
-    dateCtrl?.updateValueAndValidity();
-    montantCtrl?.updateValueAndValidity();
-  });
-
-  // Validation email live
-  this.form.get('email')?.valueChanges.subscribe(val => {
-    this.emailInvalide = !!val && this.form.get('email')?.invalid === true;
-  });
-}
-
-private verifierDoublon(): void {
-  this.recouvrementService.verifierIntentionExistante(this.token, this.idDossier).subscribe({
-    next: (res) => {
-      if (res.existe) {
-        this.intentionExistante = res;
-        this.afficherAvertissementDoublon = true;
-      }
-    },
-    error: (err) => { console.error('verifierDoublon error:', err); } // ← voir l'erreur
-  });
-}
-
-annulerIntentionExistante(): void {
-  if (!this.intentionExistante?.idIntention) return;
-  this.intentionLoading = true;
-  this.recouvrementService.annulerIntention(this.token, this.intentionExistante.idIntention).subscribe({
-    next: () => {
-      this.intentionLoading = false;
-      this.intentionExistante = null;
-      this.afficherAvertissementDoublon = false;
-      this.cdr.detectChanges();
-    },
-    error: (err) => {
-      console.error('Erreur annulation:', err);
-      this.intentionLoading = false;
-      this.cdr.detectChanges();
-    }
-  });
-}
-modifierIntentionExistante(): void {
-  this.afficherAvertissementDoublon = false;
-  this.intentionExistante = null;
-  // Le formulaire redevient visible pour soumettre une nouvelle intention
-}
-
-onSubmit(): void {
-  // Marquer typeIntention comme touché pour afficher l'erreur
-  this.form.get('typeIntention')?.markAsTouched();
-
-  if (!this.form.get('typeIntention')?.value) return;
-  if (this.form.invalid) return;
-
-  const email = this.form.get('email')?.value;
-  if (email && this.form.get('email')?.invalid) {
-    this.emailInvalide = true;
+  modifierIntentionExistante(): void {
+    this.afficherAvertissementDoublon = false;
+    this.intentionExistante = null;
   }
 
-  this.loading = true;
-  const payload = {
-    idDossier: this.idDossier,
-    typeIntention: this.form.value.typeIntention,
-    commentaire: this.form.value.commentaire,
-    datePaiementPrevue: this.form.value.datePaiementPrevue,
-    montantPropose: this.form.value.montantPropose
-  };
+  onSubmit(): void {
+    this.form.get('typeIntention')?.markAsTouched();
+    if (!this.form.get('typeIntention')?.value) return;
+    if (this.form.invalid) return;
 
-  this.recouvrementService.soumettreReponse(payload, this.token).subscribe({
-    next: () => {
-      this.loading = false;
-      this.intentionExistante = null;
-      this.afficherAvertissementDoublon = false;
-      this.router.navigate(['/confirmation'], {
-        state: {
-          idDossier: this.idDossier,
-          typeIntention: this.form.value.typeIntention,
-          token: this.token,
-          accuseParSmsUniquement: this.emailInvalide
-        }
-      });
-    },
-    error: () => { this.loading = false; }
-  });
-}
-annulerFormulaire(): void {
-  this.form.reset();
-  this.emailInvalide = false;
-}
+    const email = this.form.get('email')?.value;
+    if (email && this.form.get('email')?.invalid) {
+      this.emailInvalide = true;
+    }
+
+    this.loading = true;
+    const payload = {
+      idDossier:         this.idDossier,
+      typeIntention:     this.form.value.typeIntention,
+      commentaire:       this.form.value.commentaire,
+      datePaiementPrevue: this.form.value.datePaiementPrevue,
+      montantPropose:    this.form.value.montantPropose
+    };
+
+    this.recouvrementService.soumettreReponse(payload, this.token).subscribe({
+      next: () => {
+        this.loading = false;
+        this.intentionExistante = null;
+        this.afficherAvertissementDoublon = false;
+        this.router.navigate(['/confirmation'], {
+          state: {
+            idDossier:             this.idDossier,
+            typeIntention:         this.form.value.typeIntention,
+            token:                 this.token,
+            accuseParSmsUniquement: this.emailInvalide
+          }
+        });
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  annulerFormulaire(): void {
+    this.form.reset();
+    this.emailInvalide = false;
+  }
+
   // ── Getters ──────────────────────────────────────────
- get montantPaye(): number {
-  return this.dossier?.montantPaye ?? 0;
-}
- get joursRetard(): number {
-  return this.dossier?.nombreJoursRetard ?? 0;
-}
+  get montantPaye(): number {
+    return this.dossier?.montantPaye ?? 0;
+  }
+
+  get joursRetard(): number {
+    return this.dossier?.nombreJoursRetard ?? 0;
+  }
 
   get progressionPaiement(): number {
     if (!this.dossier?.montantInitial || this.dossier.montantInitial === 0) return 0;
@@ -227,7 +238,7 @@ annulerFormulaire(): void {
   }
 
   ouvrirWhatsApp(): void {
-    const numero = "21671340000";
+    const numero  = "21671340000";
     const message = encodeURIComponent(
       `Bonjour, je suis ${this.clientData?.nomComplet}, concernant mon dossier #${this.idDossier}.`
     );
@@ -253,7 +264,6 @@ annulerFormulaire(): void {
   telechargerRecu(): void {
     this.pdfLoading.recu = true;
     this.pdfError.recu = null;
-
     this.http.get(
       `http://localhost:5000/api/client/recu/${this.token}?idDossier=${this.idDossier}`,
       { responseType: 'blob' }
@@ -277,7 +287,6 @@ annulerFormulaire(): void {
   telechargerHistorique(): void {
     this.pdfLoading.historique = true;
     this.pdfError.historique = null;
-
     this.http.get(
       `http://localhost:5000/api/client/historique-pdf/${this.token}/${this.idDossier}`,
       { responseType: 'blob' }
@@ -312,10 +321,10 @@ annulerFormulaire(): void {
         this.messageForm.reset();
         this.rafraichirDossier(() => { this.messageSending = false; });
       },
-      error: (err) => { 
+      error: (err) => {
         console.error('Erreur lors de lenvoi du message', err);
         alert('Erreur serveur lors de lenvoi. Veuillez vérifier la connexion backend.');
-        this.messageSending = false; 
+        this.messageSending = false;
       }
     });
   }
@@ -323,12 +332,12 @@ annulerFormulaire(): void {
   // ── Relances ──────────────────────────────────────────
   ouvrirReponseRelance(relance: any): void {
     this.relanceRepondreIndex = relance.idRelance;
-    this.reponseRelanceTexte = '';
+    this.reponseRelanceTexte  = '';
   }
 
   annulerReponseRelance(): void {
     this.relanceRepondreIndex = null;
-    this.reponseRelanceTexte = '';
+    this.reponseRelanceTexte  = '';
   }
 
   envoyerReponseRelance(r: any): void {
@@ -338,15 +347,15 @@ annulerFormulaire(): void {
       .subscribe({
         next: () => {
           this.rafraichirDossier();
-          this.relanceSending = false;
-          this.reponseRelanceTexte = '';
-          this.relanceRepondreIndex = null;
+          this.relanceSending        = false;
+          this.reponseRelanceTexte   = '';
+          this.relanceRepondreIndex  = null;
           r.statut = 'repondu';
         },
-        error: (err) => { 
+        error: (err) => {
           console.error("Erreur lors de la réponse à la relance", err);
           alert('Erreur: impossible d\'envoyer la réponse à cette relance. Vérifiez la connexion au backend.');
-          this.relanceSending = false; 
+          this.relanceSending = false;
         }
       });
   }
@@ -361,9 +370,9 @@ annulerFormulaire(): void {
         this.cdr.detectChanges();
         if (callback) callback();
       },
-      error: () => { 
+      error: () => {
         this.cdr.detectChanges();
-        if (callback) callback(); 
+        if (callback) callback();
       }
     });
   }
@@ -371,7 +380,7 @@ annulerFormulaire(): void {
   changerOnglet(onglet: 'overview' | 'relances' | 'communications'): void {
     this.ongletActif = onglet;
   }
-  
+
   isDarkMode = false;
   toggleTheme(): void {
     this.isDarkMode = !this.isDarkMode;
@@ -383,8 +392,8 @@ annulerFormulaire(): void {
     this.cdr.detectChanges();
   }
 
-intentionExistante: any = null;
-intentionLoading = false;
-afficherAvertissementDoublon = false;
-emailInvalide = false;
+  intentionExistante: any = null;
+  intentionLoading = false;
+  afficherAvertissementDoublon = false;
+  emailInvalide = false;
 }

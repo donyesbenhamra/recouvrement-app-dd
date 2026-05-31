@@ -7,7 +7,6 @@ import { tokenGuard } from './guards/token-guard';
 
 
 
-
 export const routes: Routes = [
   {
     path: 'client/:token',

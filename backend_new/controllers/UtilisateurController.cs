@@ -7,13 +7,9 @@ using RecouvrementAPI.Models;
 
 namespace RecouvrementAPI.Controllers
 {
-    /// <summary>
-    /// Contrôleur gérant la "Gestion des utilisateurs" configurés en back-office (Administrateurs et Agents).
-    /// Route API de base : /api/Utilisateur
-    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Optionnellement, on restreint l'accès à l'Administrateur uniquement [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]  // ✅ Admin uniquement sur tout le controller
     public class UtilisateurController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -25,13 +21,9 @@ namespace RecouvrementAPI.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Liste tous les utilisateurs enregistrés avec infos complètes et pagination.
-        /// Route externe API : GET http://localhost:5203/api/Utilisateur/gestion
-        /// </summary>
-    
+        // GET /api/Utilisateur/gestion
         [HttpGet("gestion")]
-         [AllowAnonymous]
+        // ✅ [AllowAnonymous] supprimé
         public async Task<ActionResult<UtilisateurListResponseDto>> GetUtilisateurs(
             [FromQuery] string agence = "Toutes",
             [FromQuery] string role = "Tous",
@@ -45,14 +37,10 @@ namespace RecouvrementAPI.Controllers
                     .AsQueryable();
 
                 if (!string.IsNullOrEmpty(agence) && agence != "Toutes")
-                {
                     query = query.Where(u => u.Agence != null && u.Agence.Ville == agence);
-                }
-                
+
                 if (!string.IsNullOrEmpty(role) && role != "Tous")
-                {
                     query = query.Where(u => u.Role == role);
-                }
 
                 int totalItems = await query.CountAsync();
                 int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -91,10 +79,7 @@ namespace RecouvrementAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Ajout manuel d'un nouvel Agent/Admin depuis le panel.
-        /// Route externe API : POST http://localhost:5203/api/Utilisateur
-        /// </summary>
+        // POST /api/Utilisateur
         [HttpPost]
         public async Task<IActionResult> CreateUtilisateur([FromBody] CreateUtilisateurDto dto)
         {
@@ -109,7 +94,7 @@ namespace RecouvrementAPI.Controllers
                     Prenom = dto.Prenom,
                     Email = dto.Email,
                     Telephone = dto.Telephone,
-                    MotDePasse = BCrypt.Net.BCrypt.HashPassword(dto.MotDePasse), // Sécurité oblige
+                    MotDePasse = BCrypt.Net.BCrypt.HashPassword(dto.MotDePasse),
                     Role = dto.Role,
                     IdAgence = dto.IdAgence,
                     Statut = "Actif"
@@ -127,10 +112,7 @@ namespace RecouvrementAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Rend inactif (suppression logique) ou réactive un compte agent.
-        /// Route externe API : PUT http://localhost:5203/api/Utilisateur/{id}/statut
-        /// </summary>
+        // PUT /api/Utilisateur/{id}/statut
         [HttpPut("{id}/statut")]
         public async Task<IActionResult> ToggleStatut(int id)
         {
@@ -151,33 +133,28 @@ namespace RecouvrementAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Edite les droits (Rôle), Agence ou informations personnelles d'un Agent.
-        /// Route externe API : PUT http://localhost:5203/api/Utilisateur/{id}
-        /// </summary>
+        // PUT /api/Utilisateur/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUtilisateur(int id, [FromBody] UpdateUtilisateurDto dto)
         {
-            var user = await _context.UtilisateursBack.FindAsync(id);
-    if (user == null) return NotFound(new { message = "Agent introuvable." });
-
-    // Vérification email unique si changé
-    if (!string.IsNullOrEmpty(dto.Email) && dto.Email != user.Email)
-    {
-        if (await _context.UtilisateursBack.AnyAsync(u => u.Email == dto.Email && u.IdAgent != id))
-            return BadRequest(new { message = "Cet email existe déjà." });
-        user.Email = dto.Email;
-    }
             try
             {
-                var User = await _context.UtilisateursBack.FindAsync(id);
+                var user = await _context.UtilisateursBack.FindAsync(id);
                 if (user == null) return NotFound(new { message = "Agent introuvable." });
+
+                // Vérification email unique si changé
+                if (!string.IsNullOrEmpty(dto.Email) && dto.Email != user.Email)
+                {
+                    if (await _context.UtilisateursBack.AnyAsync(u => u.Email == dto.Email && u.IdAgent != id))
+                        return BadRequest(new { message = "Cet email existe déjà." });
+                    user.Email = dto.Email;
+                }
 
                 if (!string.IsNullOrEmpty(dto.Nom)) user.Nom = dto.Nom;
                 if (!string.IsNullOrEmpty(dto.Prenom)) user.Prenom = dto.Prenom;
                 if (!string.IsNullOrEmpty(dto.Telephone)) user.Telephone = dto.Telephone;
                 if (!string.IsNullOrEmpty(dto.Role)) user.Role = dto.Role;
-                user.IdAgence = dto.IdAgence; // Peut être null si on le ramène au siège
+                user.IdAgence = dto.IdAgence;
 
                 await _context.SaveChangesAsync();
 
@@ -188,14 +165,12 @@ namespace RecouvrementAPI.Controllers
                 _logger.LogError(ex, "Erreur d'édition agent.");
                 return StatusCode(500, new { message = "La modification a échouée." });
             }
-            
         }
 
-        // Utilitaire pour afficher "Aujourd'hui 09:30" ou "Hier 17:00" sur la plateforme Angular
         private string FormatDerniereConnexion(DateTime? dateConnexion)
         {
             if (!dateConnexion.HasValue) return "Jamais";
-            
+
             var nbJours = (DateTime.Now.Date - dateConnexion.Value.Date).Days;
             var heure = dateConnexion.Value.ToString("HH:mm");
 

@@ -24,10 +24,6 @@ namespace RecouvrementAPI.Controllers
             _httpClient = httpClientFactory.CreateClient("FastAPI");
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        //  DTOs internes pour communiquer avec FastAPI
-        // ══════════════════════════════════════════════════════════════════════
-
         private class FastApiRequest
         {
             [JsonPropertyName("montant_initial")]          public double MontantInitial        { get; set; }
@@ -51,10 +47,12 @@ namespace RecouvrementAPI.Controllers
 
         private class FastApiResponse
         {
-            [JsonPropertyName("score_numerique")]   public int    ScoreNumerique   { get; set; }
-            [JsonPropertyName("categorie_risque")]  public string CategorieRisque  { get; set; } = "";
-            [JsonPropertyName("recommandation")]    public string Recommandation   { get; set; } = "";
-            [JsonPropertyName("probabilites")]      public Dictionary<string, double> Probabilites { get; set; } = new();
+            [JsonPropertyName("score_numerique")]  public int    ScoreNumerique  { get; set; }
+            [JsonPropertyName("categorie_risque")] public string CategorieRisque { get; set; } = "";
+            [JsonPropertyName("recommandation")]   public string Recommandation  { get; set; } = "";
+            [JsonPropertyName("probabilites")]
+            public Dictionary<string, double> Probabilites { get; set; }
+                = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -173,21 +171,36 @@ namespace RecouvrementAPI.Controllers
         // ══════════════════════════════════════════════════════════════════════
 
         [HttpPost("recalculer-tous")]
-        public async Task<IActionResult> RecalculerTous()
+        public async Task<IActionResult> RecalculerTous([FromServices] IServiceScopeFactory scopeFactory)
         {
-            var dossiersId = await _context.Dossiers
-                .Where(d => d.StatutDossier != "regularise")
-                .Select(d => d.IdDossier)
-                .ToListAsync();
-
-            int succes = 0, echecs = 0;
-            foreach (var id in dossiersId)
+            List<int> dossiersId;
+            using (var scope = scopeFactory.CreateScope())
             {
-                bool ok = await RunScoringAlgorithm(id);
-                if (ok) succes++; else echecs++;
-                
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                dossiersId = await db.Dossiers
+                    .Where(d => d.StatutDossier != "regularise")
+                    .Select(d => d.IdDossier)
+                    .ToListAsync();
             }
 
+            int succes = 0, echecs = 0;
+            var semaphore = new SemaphoreSlim(3);
+
+            var tasks = dossiersId.Select(async id =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    using var scope = scopeFactory.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    bool ok = await RunScoringAlgorithmScoped(id, db);
+                    Interlocked.Add(ref succes, ok ? 1 : 0);
+                    Interlocked.Add(ref echecs, ok ? 0 : 1);
+                }
+                finally { semaphore.Release(); }
+            });
+
+            await Task.WhenAll(tasks);
             return Ok(new { message = $"Recalcul effectué : {succes} succès, {echecs} échecs." });
         }
 
@@ -200,16 +213,19 @@ namespace RecouvrementAPI.Controllers
         {
             bool ok = await RunScoringAlgorithm(id);
             if (!ok) return StatusCode(503, new { message = "Service IA indisponible. Vérifiez que FastAPI tourne sur le port 8000." });
-           return Ok(new { message = "Score de risque mis à jour avec succès." });
+            return Ok(new { message = "Score de risque mis à jour avec succès." });
         }
 
+        private Task<bool> RunScoringAlgorithm(int idDossier)
+            => RunScoringAlgorithmScoped(idDossier, _context);
+
         // ══════════════════════════════════════════════════════════════════════
-        //  ALGORITHME PRINCIPAL — APPEL FASTAPI + XGBOOST
+        //  ALGORITHME PRINCIPAL
         // ══════════════════════════════════════════════════════════════════════
 
-        private async Task<bool> RunScoringAlgorithm(int idDossier)
+        private async Task<bool> RunScoringAlgorithmScoped(int idDossier, ApplicationDbContext db)
         {
-            var dossier = await _context.Dossiers
+            var dossier = await db.Dossiers
                 .Include(d => d.Client)
                     .ThenInclude(c => c.Dossiers)
                         .ThenInclude(cd => cd.Echeances)
@@ -221,7 +237,6 @@ namespace RecouvrementAPI.Controllers
 
             if (dossier == null) return false;
 
-            // ── Agrégation des données ────────────────────────────────────────
             var echeances         = dossier.Echeances.ToList();
             var echeancesImpayees = echeances.Where(e => e.Statut == "impaye").ToList();
             var intentions        = dossier.Intentions.ToList();
@@ -238,9 +253,8 @@ namespace RecouvrementAPI.Controllers
                 ? (double)intentionsAvecMontant.Average(i => i.MontantPropose ?? 0) : 0;
 
             double confianceIntentionMoy = intentions.Any()
-                ? (double)intentions.Average(i => i.ConfianceClient) : 0;
+                ? (double)intentions.Average(i => (double)(i.ConfianceClient ?? 0)) : 0;
 
-            // ── Construction de la requête FastAPI ────────────────────────────
             var request = new FastApiRequest
             {
                 MontantInitial        = (double)dossier.MontantInitial,
@@ -248,7 +262,7 @@ namespace RecouvrementAPI.Controllers
                 FraisDossier          = (double)dossier.FraisDossier,
                 TauxInteret           = (double)dossier.TauxInteret,
                 ConfianceClient       = (double)dossier.ConfianceClient,
-               TypeEmprunt = NormaliserTypeEmprunt(dossier.TypeEmprunt),
+                TypeEmprunt           = NormaliserTypeEmprunt(dossier.TypeEmprunt),
                 StatutDossier         = dossier.StatutDossier ?? "amiable",
                 DateCreation          = dossier.DateCreation.ToString("yyyy-MM-dd"),
                 NbEcheancesTotal      = echeances.Count,
@@ -261,27 +275,32 @@ namespace RecouvrementAPI.Controllers
                 MontantProposeMoyen   = montantProposeMoyen,
                 ConfianceIntentionMoy = confianceIntentionMoy
             };
-            
 
-            // ── Appel FastAPI ─────────────────────────────────────────────────
             FastApiResponse? iaResponse = null;
             try
             {
-               var response = await _httpClient.PostAsJsonAsync("/score", request);
-if (response.IsSuccessStatusCode)
-    iaResponse = await response.Content.ReadFromJsonAsync<FastApiResponse>();
-else
-{
-    var err = await response.Content.ReadAsStringAsync();
-    _logger.LogError("FastAPI 400 dossier {Id}: {Err}", idDossier, err);
-}
+                var response = await _httpClient.PostAsJsonAsync("/score", request);
+                if (response.IsSuccessStatusCode)
+                {
+                    iaResponse = await response.Content.ReadFromJsonAsync<FastApiResponse>();
+                    _logger.LogInformation(
+                        "FastAPI probs dossier {Id}: Faible={F} Moyen={M} Eleve={E}",
+                        idDossier,
+                        iaResponse?.Probabilites.GetValueOrDefault("Faible", -1),
+                        iaResponse?.Probabilites.GetValueOrDefault("Moyen",  -1),
+                        iaResponse?.Probabilites.GetValueOrDefault("Eleve",  -1));
+                }
+                else
+                {
+                    var err = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("FastAPI 400 dossier {Id}: {Err}", idDossier, err);
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "FastAPI indisponible pour dossier {Id}, fallback rule-based.", idDossier);
             }
 
-            // ── Calcul du score ───────────────────────────────────────────────
             int scoreCalcule;
             string niveau;
             string recommandation;
@@ -295,6 +314,11 @@ else
                 probFaible     = (decimal)iaResponse.Probabilites.GetValueOrDefault("Faible", 0);
                 probMoyen      = (decimal)iaResponse.Probabilites.GetValueOrDefault("Moyen",  0);
                 probEleve      = (decimal)iaResponse.Probabilites.GetValueOrDefault("Eleve",  0);
+
+                // Log de vérification après extraction
+                _logger.LogInformation(
+                    "Probs extraites dossier {Id}: probFaible={F} probMoyen={M} probEleve={E}",
+                    idDossier, probFaible, probMoyen, probEleve);
             }
             else
             {
@@ -309,7 +333,6 @@ else
                 recommandation    = GenererTexteRecommandationFallback(niveau);
             }
 
-            // ── Points détaillés pour affichage dashboard ─────────────────────
             int retardJoursDisplay  = CalculerRetardJours(echeances);
             int ptsRetardDisplay    = retardJoursDisplay == 0 ? 0 : retardJoursDisplay < 30 ? 10 : retardJoursDisplay <= 90 ? 20 : 30;
             int ptsHistDisplay      = echeancesImpayees.Count == 0 ? 0 : echeancesImpayees.Count <= 2 ? 10 : echeancesImpayees.Count <= 5 ? 20 : 25;
@@ -317,8 +340,7 @@ else
             var lastInt             = intentions.FirstOrDefault();
             int ptsIntentionDisplay = lastInt == null ? 15 : lastInt.TypeIntention == "paiement_immediat" ? 0 : lastInt.TypeIntention == "promesse_paiement" ? 5 : 10;
 
-            // ── Sauvegarde en base ────────────────────────────────────────────
-            var existant = await _context.ScoresRisque
+            var existant = await db.ScoresRisque
                 .FirstOrDefaultAsync(s => s.IdDossier == idDossier);
 
             if (existant != null)
@@ -337,7 +359,7 @@ else
             }
             else
             {
-                _context.ScoresRisque.Add(new ScoreRisque
+                db.ScoresRisque.Add(new ScoreRisque
                 {
                     IdDossier        = idDossier,
                     Valeur           = scoreCalcule,
@@ -354,7 +376,7 @@ else
                 });
             }
 
-            await _context.SaveChangesAsync();
+            await db.SaveChangesAsync();
             return true;
         }
 
@@ -416,15 +438,16 @@ else
             if (jours < 30) return $"{jours} jours";
             return $"{jours / 30} mois";
         }
+
         private string NormaliserTypeEmprunt(string? type)
-{
-    if (string.IsNullOrEmpty(type)) return "personnel";
-    var t = type.ToLower();
-    if (t.Contains("immobilier")) return "immobilier";
-    if (t.Contains("auto"))       return "automobile";
-    if (t.Contains("conso"))      return "personnel";
-    if (t.Contains("profes"))     return "professionnel";
-    return "personnel";
-}
+        {
+            if (string.IsNullOrEmpty(type)) return "personnel";
+            var t = type.ToLower();
+            if (t.Contains("immobilier")) return "immobilier";
+            if (t.Contains("auto"))       return "automobile";
+            if (t.Contains("conso"))      return "personnel";
+            if (t.Contains("profes"))     return "professionnel";
+            return "personnel";
+        }
     }
 }

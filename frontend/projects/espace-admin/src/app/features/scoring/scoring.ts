@@ -20,8 +20,7 @@ export class ScoringComponent implements OnInit {
   scanningStep = '';
   scanningProgress = 0;
   recherche = '';
-  filtreEtat = '';   // ← variable séparée pour le select
-
+ 
   dossiers: any[] = [];
   kpis = { dossiersScores: 0, risqueEleve: 0, risqueMoyen: 0, risqueFaible: 0 };
   selectedDossier: any = null;
@@ -133,9 +132,21 @@ setTimeout(() => {
   }
 
   recalculerDossier(id: number) {
-    this.apiService.recalculerDossier(id).subscribe({
-      next: res => this.toastService.show(res.message, 'success'),
-      error: (err: any) => this.toastService.show(err.error?.message || 'Erreur recalcul', 'error')
-    });
-  }
+  this.apiService.recalculerDossier(id).subscribe({
+    next: res => {
+      this.toastService.show(res.message, 'success');
+      // Recharger le dashboard ET les détails du dossier recalculé
+      this.loadDashboard();
+      if (this.selectedDossierId === id) {
+        this.apiService.getScoringDetails(id).subscribe({
+          next: details => {
+            this.selectedDossier = details;
+            this.cdr.markForCheck();
+          }
+        });
+      }
+    },
+    error: (err: any) => this.toastService.show(err.error?.message || 'Erreur recalcul', 'error')
+  });
+}
 }
